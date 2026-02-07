@@ -31,6 +31,21 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(newConcert);
 }
 
+export async function PATCH(request: NextRequest) {
+  const { id, ...updates } = await request.json();
+  const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
+  const concert = concerts.find((c) => c.id === id);
+  if (concert) {
+    if (updates.title !== undefined) concert.title = updates.title;
+    if (updates.date !== undefined) concert.date = updates.date;
+    if (updates.venue !== undefined) concert.venue = updates.venue;
+    if (updates.city !== undefined) concert.city = updates.city;
+    if (updates.memo !== undefined) concert.memo = updates.memo;
+    await writeStore(STORE_NAME, concerts);
+  }
+  return NextResponse.json(concerts);
+}
+
 export async function DELETE(request: NextRequest) {
   const { id } = await request.json();
   const concerts = await readStore<UserConcert[]>(STORE_NAME, []);

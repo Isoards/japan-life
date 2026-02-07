@@ -44,3 +44,59 @@ export interface EnrichedArtist extends Omit<Artist, "tracks"> {
   imageUrl: string | null;
   itunesTracks: ITunesTrack[];
 }
+
+// ── 취업/이주 준비 대시보드 타입 ──
+
+export type ChecklistCategory = "pre-departure" | "post-arrival" | "living-setup" | "workplace";
+export type ChecklistPriority = "high" | "medium" | "low";
+
+export interface ChecklistItem {
+  id: string;
+  category: ChecklistCategory;
+  title: string;
+  description?: string;
+  checked: boolean;
+  priority: ChecklistPriority;
+  custom?: boolean;
+}
+
+export interface SalaryBreakdown {
+  monthlyBase: number;
+  bonusMonths: number;
+  grossAnnual: number;
+  grossMonthly: number;
+  incomeTax: number;
+  residentTax: number;
+  healthInsurance: number;
+  pension: number;
+  employmentInsurance: number;
+  totalDeductions: number;
+  netMonthly: number;
+  bonusGrossPerPayment: number;
+  bonusNetPerPayment: number;
+  netAnnual: number;
+}
+
+export interface BudgetCategory {
+  id: string;
+  label: string;
+  amount: number;
+  icon: string;
+}
+
+export interface BudgetData {
+  income: number;
+  categories: BudgetCategory[];
+}
+
+export interface GuideSection {
+  id: string;
+  title: string;
+  icon: string;
+  items: GuideItem[];
+}
+
+export interface GuideItem {
+  title: string;
+  content: string;
+}

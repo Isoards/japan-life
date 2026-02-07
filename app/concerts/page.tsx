@@ -6,6 +6,7 @@ import "react-calendar/dist/Calendar.css";
 import {
   getUserConcerts,
   addUserConcert,
+  updateUserConcert,
   deleteUserConcert,
   UserConcert,
 } from "@/lib/userConcerts";
@@ -15,6 +16,7 @@ export default function ConcertsPage() {
   const [concerts, setConcerts] = useState<UserConcert[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -57,6 +59,7 @@ export default function ConcertsPage() {
     setFormVenue("");
     setFormCity("");
     setFormMemo("");
+    setEditingId(null);
   };
 
   const openForm = (presetDate?: string) => {
@@ -65,16 +68,37 @@ export default function ConcertsPage() {
     setShowForm(true);
   };
 
+  const startEdit = (concert: UserConcert) => {
+    setEditingId(concert.id);
+    setFormTitle(concert.title);
+    setFormDate(concert.date);
+    setFormVenue(concert.venue);
+    setFormCity(concert.city);
+    setFormMemo(concert.memo);
+    setShowForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formDate) return;
-    await addUserConcert({
-      title: formTitle.trim(),
-      date: formDate,
-      venue: formVenue.trim(),
-      city: formCity.trim(),
-      memo: formMemo.trim(),
-    });
+
+    if (editingId) {
+      await updateUserConcert(editingId, {
+        title: formTitle.trim(),
+        date: formDate,
+        venue: formVenue.trim(),
+        city: formCity.trim(),
+        memo: formMemo.trim(),
+      });
+    } else {
+      await addUserConcert({
+        title: formTitle.trim(),
+        date: formDate,
+        venue: formVenue.trim(),
+        city: formCity.trim(),
+        memo: formMemo.trim(),
+      });
+    }
     loadConcerts();
     setShowForm(false);
     resetForm();
@@ -94,15 +118,6 @@ export default function ConcertsPage() {
       );
     }
     return null;
-  };
-
-  const formatDateKo = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("ko", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    });
   };
 
   return (
@@ -142,14 +157,16 @@ export default function ConcertsPage() {
         </div>
       </div>
 
-      {/* Add Form Modal */}
+      {/* Add/Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md rounded-2xl bg-gray-900 border border-white/10 p-6 space-y-4"
           >
-            <h2 className="text-xl font-bold text-white">콘서트 일정 추가</h2>
+            <h2 className="text-xl font-bold text-white">
+              {editingId ? "콘서트 일정 수정" : "콘서트 일정 추가"}
+            </h2>
 
             <div>
               <label className="block text-sm text-gray-400 mb-1">
@@ -216,7 +233,7 @@ export default function ConcertsPage() {
                 type="submit"
                 className="flex-1 py-2 rounded-lg bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors cursor-pointer text-sm"
               >
-                추가
+                {editingId ? "수정" : "추가"}
               </button>
               <button
                 type="button"
@@ -277,6 +294,7 @@ export default function ConcertsPage() {
                     <ConcertCard
                       key={concert.id}
                       concert={concert}
+                      onEdit={startEdit}
                       onDelete={handleDelete}
                     />
                   ))}
@@ -296,7 +314,7 @@ export default function ConcertsPage() {
             sortedConcerts.map((concert) => (
               <div
                 key={concert.id}
-                className="flex items-start gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                className="flex items-start gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5 group"
               >
                 <div className="text-center min-w-[60px]">
                   <div className="text-2xl font-bold text-pink-400">
@@ -328,25 +346,46 @@ export default function ConcertsPage() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDelete(concert.id)}
-                  className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1 shrink-0"
-                  title="삭제"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startEdit(concert)}
+                    className="text-gray-600 hover:text-purple-400 transition-colors cursor-pointer p-1"
+                    title="수정"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(concert.id)}
+                    className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
+                    title="삭제"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -373,13 +412,15 @@ export default function ConcertsPage() {
 
 function ConcertCard({
   concert,
+  onEdit,
   onDelete,
 }: {
   concert: UserConcert;
+  onEdit: (concert: UserConcert) => void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+    <div className="p-4 rounded-lg bg-white/5 border border-white/10 group">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h4 className="font-semibold text-white">{concert.title}</h4>
@@ -394,25 +435,46 @@ function ConcertCard({
             </p>
           )}
         </div>
-        <button
-          onClick={() => onDelete(concert.id)}
-          className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1 shrink-0"
-          title="삭제"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onEdit(concert)}
+            className="text-gray-600 hover:text-purple-400 transition-colors cursor-pointer p-1"
+            title="수정"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => onDelete(concert.id)}
+            className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
+            title="삭제"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

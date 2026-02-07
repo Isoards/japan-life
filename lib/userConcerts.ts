@@ -28,6 +28,18 @@ export async function addUserConcert(
   return await res.json();
 }
 
+export async function updateUserConcert(
+  id: string,
+  updates: Partial<Omit<UserConcert, "id">>
+): Promise<UserConcert[]> {
+  const res = await fetch("/api/user-concerts", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...updates }),
+  });
+  return res.json();
+}
+
 export async function deleteUserConcert(id: string): Promise<void> {
   await fetch("/api/user-concerts", {
     method: "DELETE",

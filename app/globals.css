@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Hide scrollbar for nav horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "pre-1",
+    "category": "pre-departure",
+    "title": "재류자격인정증명서(COE) 수령",
+    "description": "회사에서 발급받은 COE를 수령하고 비자 신청 준비",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "pre-2",
+    "category": "pre-departure",
+    "title": "취업비자 신청 및 수령",
+    "description": "주한일본대사관에서 취업비자 신청 (기술·인문지식·국제업무 등)",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "pre-3",
+    "category": "pre-departure",
+    "title": "항공권 예약",
+    "description": "나리타/하네다 공항 → 토치기현 이동 경로 확인",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "pre-4",
+    "category": "pre-departure",
+    "title": "해외전출신고",
+    "description": "주민센터에서 해외이주 신고 처리",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "pre-5",
+    "category": "pre-departure",
+    "title": "국제운전면허증 발급",
+    "description": "필요시 면허시험장에서 국제면허 발급 (1년 유효)",
+    "checked": true,
+    "priority": "low"
+  },
+  {
+    "id": "pre-6",
+    "category": "pre-departure",
+    "title": "일본 유심/eSIM 준비",
+    "description": "도착 직후 사용할 임시 통신수단 준비",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "pre-7",
+    "category": "pre-departure",
+    "title": "초기 생활비 환전 (엔화)",
+    "description": "첫 월급 전까지 사용할 엔화 30~50만엔 준비",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-1",
+    "category": "post-arrival",
+    "title": "재류카드 수령 (공항)",
+    "description": "입국 시 공항에서 재류카드 발급받기",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-2",
+    "category": "post-arrival",
+    "title": "시구청 전입신고 (住民届)",
+    "description": "거주지 시구청에서 14일 이내 전입신고",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-3",
+    "category": "post-arrival",
+    "title": "마이넘버카드 신청",
+    "description": "시구청에서 마이넘버 통지서 수령 후 카드 신청",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-4",
+    "category": "post-arrival",
+    "title": "은행 계좌 개설",
+    "description": "ゆうちょ銀行 또는 지역 은행에서 급여 계좌 개설",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-5",
+    "category": "post-arrival",
+    "title": "국민건강보험 가입",
+    "description": "회사 사회보험 또는 시구청에서 국민건강보험 가입",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "post-6",
+    "category": "post-arrival",
+    "title": "휴대폰 본계약",
+    "description": "재류카드 수령 후 일본 통신사 계약 (docomo/au/SoftBank/격안)",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "living-1",
+    "category": "living-setup",
+    "title": "주거 계약 완료",
+    "description": "임대 계약서 확인, 시키킨/레이킨/중개수수료 납부",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "living-2",
+    "category": "living-setup",
+    "title": "전기/가스/수도 개통",
+    "description": "각 지역 공급사에 연락하여 라이프라인 개통",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "living-3",
+    "category": "living-setup",
+    "title": "인터넷 개통",
+    "description": "광섬유(光回線) 또는 포켓와이파이 계약",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "living-4",
+    "category": "living-setup",
+    "title": "생활용품 구매",
+    "description": "이불, 조리도구, 세탁용품 등 기본 생활용품 (100엔숍 활용)",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "living-6",
+    "category": "living-setup",
+    "title": "쓰레기 분리수거 규칙 확인",
+    "description": "지역별 분리수거 요일과 분류 방법 숙지",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "work-1",
+    "category": "workplace",
+    "title": "고용계약서 확인 및 서명",
+    "description": "근무조건, 급여, 수당, 퇴직금 등 계약 내용 확인",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "work-2",
+    "category": "workplace",
+    "title": "통근 경로 확인",
+    "description": "자택에서 회사까지 교통수단 및 소요시간 확인, 정기권 구매",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "work-3",
+    "category": "workplace",
+    "title": "회사 사회보험 가입 확인",
+    "description": "건강보험, 후생연금, 고용보험, 산재보험 가입 여부 확인",
+    "checked": false,
+    "priority": "high"
+  }
+]

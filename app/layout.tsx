@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "J-Pop Dashboard",
+  title: "JP 라이프",
   description:
-    "J-Pop 아티스트의 음악과 콘서트 정보를 한눈에. YOASOBI, Ado, 요네즈 켄시 등.",
+    "일본 생활 준비 대시보드 — J-Pop, 콘서트, 취업/이주 체크리스트, 급여 계산기, 생활 가이드",
 };
 
 export default function RootLayout({
