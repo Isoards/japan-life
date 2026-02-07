@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "yoasobi",
+    "name": "YOASOBI",
+    "nameJa": "ヨアソビ",
+    "genre": ["J-Pop", "Electronic"],
+    "image": "/images/yoasobi.jpg",
+    "itunesId": 1490256993,
+    "description": "YOASOBI is a Japanese music duo consisting of Vocaloid producer Ayase and singer-songwriter ikura. Known for creating music based on novels and short stories, they debuted in 2019 with \"Yoru ni Kakeru\" which became a massive viral hit. Their unique blend of electronic pop and storytelling has made them one of Japan's most popular acts worldwide.",
+    "tracks": []
+  },
+  {
+    "slug": "ado",
+    "name": "Ado",
+    "nameJa": "アド",
+    "genre": ["J-Pop", "Rock", "Vocaloid"],
+    "image": "/images/ado.jpg",
+    "itunesId": 1492604670,
+    "description": "Ado is a Japanese singer known for her powerful and versatile vocals. She rose to fame with her debut single \"Usseewa\" in 2020 and further gained international recognition as the singing voice of Uta in the anime film \"ONE PIECE FILM RED.\" Her dynamic vocal range spans from delicate whispers to intense screaming vocals.",
+    "tracks": []
+  },
+  {
+    "slug": "kenshi-yonezu",
+    "name": "Kenshi Yonezu",
+    "nameJa": "米津玄師",
+    "genre": ["J-Pop", "Alternative", "Rock"],
+    "image": "/images/kenshi-yonezu.jpg",
+    "itunesId": 530814268,
+    "description": "Kenshi Yonezu is a Japanese singer-songwriter, record producer, and illustrator. Originally active as a Vocaloid producer under the name Hachi, he transitioned to performing his own vocals. His 2018 single \"Lemon\" became one of the best-selling digital singles in Japanese history. Known for his artistic vision, he also creates his own music videos and artwork.",
+    "tracks": []
+  }
+]

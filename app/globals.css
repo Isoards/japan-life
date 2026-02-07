@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* react-calendar dark theme overrides */
+.concert-calendar .react-calendar {
+  background: transparent;
+  border: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.concert-calendar .react-calendar__tile {
+  color: #ededed;
+  padding: 12px 8px;
+  border-radius: 8px;
+}
+
+.concert-calendar .react-calendar__tile:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.concert-calendar .react-calendar__tile--active {
+  background: rgba(168, 85, 247, 0.3) !important;
+  color: white;
+}
+
+.concert-calendar .react-calendar__tile--now {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.concert-calendar .react-calendar__navigation button {
+  color: #ededed;
+  font-size: 1rem;
+  font-weight: 600;
+  min-width: 44px;
+  border-radius: 8px;
+}
+
+.concert-calendar .react-calendar__navigation button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.concert-calendar .react-calendar__month-view__weekdays {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.concert-calendar .react-calendar__month-view__weekdays abbr {
+  text-decoration: none;
+}
+
+.concert-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #4b5563;
+}

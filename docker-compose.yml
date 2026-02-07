@@ -1,0 +1,14 @@
+services:
+  jpop-dashboard:
+    image: isoards/jpop-dashboard:latest
+    container_name: jpop-dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - jpop-data:/app/data/user
+    environment:
+      - DATA_DIR=/app/data/user
+    restart: unless-stopped
+
+volumes:
+  jpop-data:

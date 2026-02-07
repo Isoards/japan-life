@@ -1,0 +1,102 @@
+[
+  {
+    "id": "1",
+    "artistSlug": "yoasobi",
+    "title": "YOASOBI ARENA TOUR 2026",
+    "date": "2026-04-15",
+    "venue": "Tokyo Dome",
+    "city": "Tokyo",
+    "country": "Japan",
+    "ticketUrl": "https://yoasobi.example.com/tour2026"
+  },
+  {
+    "id": "2",
+    "artistSlug": "yoasobi",
+    "title": "YOASOBI ARENA TOUR 2026",
+    "date": "2026-04-20",
+    "venue": "Osaka-jo Hall",
+    "city": "Osaka",
+    "country": "Japan",
+    "ticketUrl": "https://yoasobi.example.com/tour2026-osaka"
+  },
+  {
+    "id": "3",
+    "artistSlug": "ado",
+    "title": "Ado WORLD TOUR 2026 - Wish",
+    "date": "2026-03-10",
+    "venue": "Saitama Super Arena",
+    "city": "Saitama",
+    "country": "Japan",
+    "ticketUrl": "https://ado.example.com/worldtour2026"
+  },
+  {
+    "id": "4",
+    "artistSlug": "ado",
+    "title": "Ado WORLD TOUR 2026 - Wish",
+    "date": "2026-05-22",
+    "venue": "The Forum",
+    "city": "Los Angeles",
+    "country": "USA",
+    "ticketUrl": "https://ado.example.com/worldtour2026-la"
+  },
+  {
+    "id": "5",
+    "artistSlug": "ado",
+    "title": "Ado WORLD TOUR 2026 - Wish",
+    "date": "2026-05-28",
+    "venue": "Madison Square Garden",
+    "city": "New York",
+    "country": "USA",
+    "ticketUrl": "https://ado.example.com/worldtour2026-ny"
+  },
+  {
+    "id": "6",
+    "artistSlug": "kenshi-yonezu",
+    "title": "Kenshi Yonezu TOUR 2026 - Junk",
+    "date": "2026-06-01",
+    "venue": "Yokohama Arena",
+    "city": "Yokohama",
+    "country": "Japan",
+    "ticketUrl": "https://yonezu.example.com/tour2026"
+  },
+  {
+    "id": "7",
+    "artistSlug": "kenshi-yonezu",
+    "title": "Kenshi Yonezu TOUR 2026 - Junk",
+    "date": "2026-06-15",
+    "venue": "Nagoya Dome",
+    "city": "Nagoya",
+    "country": "Japan",
+    "ticketUrl": "https://yonezu.example.com/tour2026-nagoya"
+  },
+  {
+    "id": "8",
+    "artistSlug": "yoasobi",
+    "title": "YOASOBI ASIA TOUR 2026",
+    "date": "2026-07-10",
+    "venue": "National Stadium",
+    "city": "Singapore",
+    "country": "Singapore",
+    "ticketUrl": "https://yoasobi.example.com/asia2026-sg"
+  },
+  {
+    "id": "9",
+    "artistSlug": "ado",
+    "title": "Ado WORLD TOUR 2026 - Wish",
+    "date": "2026-06-20",
+    "venue": "Wembley Arena",
+    "city": "London",
+    "country": "UK",
+    "ticketUrl": "https://ado.example.com/worldtour2026-london"
+  },
+  {
+    "id": "10",
+    "artistSlug": "kenshi-yonezu",
+    "title": "Kenshi Yonezu TOUR 2026 - Junk",
+    "date": "2026-08-05",
+    "venue": "Fukuoka Dome",
+    "city": "Fukuoka",
+    "country": "Japan",
+    "ticketUrl": "https://yonezu.example.com/tour2026-fukuoka"
+  }
+]
