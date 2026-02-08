@@ -19,6 +19,7 @@ const ALL_CATEGORIES: ChecklistCategory[] = [
   "post-arrival",
   "living-setup",
   "workplace",
+  "finance",
 ];
 
 export default function ChecklistPage() {

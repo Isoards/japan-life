@@ -2,56 +2,64 @@
   {
     "id": "pre-1",
     "category": "pre-departure",
-    "title": "재류자격인정증명서(COE) 수령",
-    "description": "회사에서 발급받은 COE를 수령하고 비자 신청 준비",
+    "title": "비자/COE 신청 및 수령",
+    "description": "졸업증명서 준비, COE 수령 후 주한일본대사관에서 취업비자 신청",
     "checked": false,
     "priority": "high"
   },
   {
     "id": "pre-2",
     "category": "pre-departure",
-    "title": "취업비자 신청 및 수령",
-    "description": "주한일본대사관에서 취업비자 신청 (기술·인문지식·국제업무 등)",
+    "title": "영문 운전면허증 발급",
+    "description": "면허시험장에서 영문면허 발급 (일본 면허 키리카에용)",
     "checked": false,
     "priority": "high"
   },
   {
     "id": "pre-3",
     "category": "pre-departure",
-    "title": "항공권 예약",
-    "description": "나리타/하네다 공항 → 토치기현 이동 경로 확인",
+    "title": "핸드폰 알뜰폰 전환",
+    "description": "본인인증용 번호 유지. 가장 저렴한 요금제(월5천원 이하)로 변경",
     "checked": false,
-    "priority": "high"
+    "priority": "medium"
   },
   {
     "id": "pre-4",
     "category": "pre-departure",
-    "title": "해외전출신고",
-    "description": "주민센터에서 해외이주 신고 처리",
+    "title": "건강보험 급여정지 신청",
+    "description": "출국 후 건강보험공단 앱에서 급여정지 신청. 해외이주 신고는 안 함(주민등록 유지)",
     "checked": false,
-    "priority": "medium"
+    "priority": "high"
   },
   {
     "id": "pre-5",
     "category": "pre-departure",
-    "title": "국제운전면허증 발급",
-    "description": "필요시 면허시험장에서 국제면허 발급 (1년 유효)",
-    "checked": false,
-    "priority": "low"
-  },
-  {
-    "id": "pre-6",
-    "category": "pre-departure",
-    "title": "일본 유심/eSIM 준비",
-    "description": "도착 직후 사용할 임시 통신수단 준비",
+    "title": "실비보험 해외체류 처리",
+    "description": "보험사에 연락하여 해외 장기 체류 보험료 환급/중지 신청",
     "checked": false,
     "priority": "medium"
   },
   {
+    "id": "pre-6",
+    "category": "pre-departure",
+    "title": "주식/ETF 전량 매도",
+    "description": "일본 거주자 신분 시 세금 복잡성 방지를 위해 현금화",
+    "checked": false,
+    "priority": "high"
+  },
+  {
     "id": "pre-7",
     "category": "pre-departure",
-    "title": "초기 생활비 환전 (엔화)",
-    "description": "첫 월급 전까지 사용할 엔화 30~50만엔 준비",
+    "title": "청약통장/예금 유지 확인",
+    "description": "청약통장 기간 유지, 예금(7월 만기) 확인",
+    "checked": false,
+    "priority": "low"
+  },
+  {
+    "id": "pre-8",
+    "category": "pre-departure",
+    "title": "초기 생활비 엔화 환전",
+    "description": "첫 월급 전까지 사용할 엔화 준비",
     "checked": false,
     "priority": "high"
   },
@@ -66,8 +74,8 @@
   {
     "id": "post-2",
     "category": "post-arrival",
-    "title": "시구청 전입신고 (住民届)",
-    "description": "거주지 시구청에서 14일 이내 전입신고",
+    "title": "전입신고 + 주민표 발급",
+    "description": "거주지 시구청에서 14일 이내 전입신고(住民届), 주민표 발급",
     "checked": false,
     "priority": "high"
   },
@@ -82,32 +90,40 @@
   {
     "id": "post-4",
     "category": "post-arrival",
-    "title": "은행 계좌 개설",
-    "description": "ゆうちょ銀行 또는 지역 은행에서 급여 계좌 개설",
+    "title": "핸드폰 개통",
+    "description": "UQ모바일 또는 아하모 등 격안 통신사 계약",
     "checked": false,
     "priority": "high"
   },
   {
     "id": "post-5",
     "category": "post-arrival",
-    "title": "국민건강보험 가입",
-    "description": "회사 사회보험 또는 시구청에서 국민건강보험 가입",
+    "title": "은행 계좌 개설",
+    "description": "SMBC, SBI新生銀行, SBI証券 계좌 개설",
     "checked": false,
     "priority": "high"
   },
   {
     "id": "post-6",
     "category": "post-arrival",
-    "title": "휴대폰 본계약",
-    "description": "재류카드 수령 후 일본 통신사 계약 (docomo/au/SoftBank/격안)",
+    "title": "신용카드 신청",
+    "description": "SMBC Olive 카드(GOLD), SMBC nl GOLD 신청",
     "checked": false,
-    "priority": "medium"
+    "priority": "high"
+  },
+  {
+    "id": "post-7",
+    "category": "post-arrival",
+    "title": "자동차 면허 키리카에",
+    "description": "영문운전면허증으로 일본 면허 교환 (면허센터)",
+    "checked": false,
+    "priority": "high"
   },
   {
     "id": "living-1",
     "category": "living-setup",
-    "title": "주거 계약 완료",
-    "description": "임대 계약서 확인, 시키킨/레이킨/중개수수료 납부",
+    "title": "주거 계약 완료 (사택)",
+    "description": "야칭 2.5만엔 사택 입주, 계약서 확인",
     "checked": false,
     "priority": "high"
   },
@@ -131,23 +147,15 @@
     "id": "living-4",
     "category": "living-setup",
     "title": "생활용품 구매",
-    "description": "이불, 조리도구, 세탁용품 등 기본 생활용품 (100엔숍 활용)",
+    "description": "이불, 조리도구, 세탁용품 등 기본 생활용품 (100엔숍/다이소 활용)",
     "checked": false,
     "priority": "medium"
   },
   {
     "id": "living-5",
     "category": "living-setup",
-    "title": "자전거 구매",
-    "description": "토치기현은 차/자전거 이동이 편리. 방범등록 필수",
-    "checked": false,
-    "priority": "low"
-  },
-  {
-    "id": "living-6",
-    "category": "living-setup",
     "title": "쓰레기 분리수거 규칙 확인",
-    "description": "지역별 분리수거 요일과 분류 방법 숙지",
+    "description": "지역별 분리수거 요일과 분류 방법 숙지. 시 지정 봉투 구매",
     "checked": false,
     "priority": "medium"
   },
@@ -174,5 +182,45 @@
     "description": "건강보험, 후생연금, 고용보험, 산재보험 가입 여부 확인",
     "checked": false,
     "priority": "high"
+  },
+  {
+    "id": "finance-1",
+    "category": "finance",
+    "title": "월정액(구독) 정리",
+    "description": "Discord(17일), 톡서랍(20일), 네이버멤버십(7일), YouTube(4일), 통신비(신한 Always On) 결제일 관리",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "finance-2",
+    "category": "finance",
+    "title": "부양공제 등록",
+    "description": "아빠(38만)+엄마(38만)+할머니(48만) 총 3명 등록. 연간 124만엔 송금 시 약 21~23만엔 세금 환급",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "finance-3",
+    "category": "finance",
+    "title": "후루사토 납세 신청",
+    "description": "연간 약 2만엔 기부 → 실질 세금 1.8만엔 감면 + 쌀/고기 등 답례품 수령",
+    "checked": false,
+    "priority": "medium"
+  },
+  {
+    "id": "finance-4",
+    "category": "finance",
+    "title": "新NISA 적립식 투자 개시",
+    "description": "SBI証券에서 매달 3만엔 츠미타테(적립식) 투자 시작",
+    "checked": false,
+    "priority": "high"
+  },
+  {
+    "id": "finance-5",
+    "category": "finance",
+    "title": "iDeCo 가입 검토",
+    "description": "개인형 확정기여연금 가입 검토. 절세 효과 확인",
+    "checked": false,
+    "priority": "low"
   }
 ]

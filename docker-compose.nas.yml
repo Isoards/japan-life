@@ -2,14 +2,12 @@ services:
   japan-life:
     image: isoards/japan-life:latest
     container_name: japan-life
+    user: "0:0"
     ports:
-      - "3000:3000"
+      - "3090:3000"
     volumes:
-      - japan-life-data:/app/data/user
+      - /volume1/docker/japan-life/data:/app/data/user
     environment:
       - DATA_DIR=/app/data/user
       - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     restart: unless-stopped
-
-volumes:
-  japan-life-data:

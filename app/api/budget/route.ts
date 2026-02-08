@@ -19,6 +19,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body: BudgetData = await request.json();
-  await writeStore(STORE_NAME, body);
+  try {
+    await writeStore(STORE_NAME, body);
+  } catch {
+    // Volume permission issue — skip persisting
+  }
   return NextResponse.json(body);
 }

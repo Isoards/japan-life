@@ -5,11 +5,19 @@ import defaults from "@/data/checklist-defaults.json";
 
 const STORE_NAME = "checklist";
 
+async function safeSave(items: ChecklistItem[]): Promise<void> {
+  try {
+    await writeStore(STORE_NAME, items);
+  } catch {
+    // Volume permission issue — skip persisting
+  }
+}
+
 async function getChecklist(): Promise<ChecklistItem[]> {
   const stored = await readStore<ChecklistItem[] | null>(STORE_NAME, null);
   if (stored === null) {
     const items = defaults as ChecklistItem[];
-    await writeStore(STORE_NAME, items);
+    await safeSave(items);
     return items;
   }
   return stored;
@@ -31,7 +39,7 @@ export async function POST(request: NextRequest) {
     custom: true,
   };
   items.push(newItem);
-  await writeStore(STORE_NAME, items);
+  await safeSave(items);
 
   return NextResponse.json(items);
 }
@@ -46,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     if (updates.description !== undefined) item.description = updates.description;
     if (updates.category !== undefined) item.category = updates.category;
     if (updates.priority !== undefined) item.priority = updates.priority;
-    await writeStore(STORE_NAME, items);
+    await safeSave(items);
   }
   return NextResponse.json(items);
 }
@@ -55,6 +63,6 @@ export async function DELETE(request: NextRequest) {
   const { id } = await request.json();
   const items = await getChecklist();
   const updated = items.filter((i) => i.id !== id);
-  await writeStore(STORE_NAME, updated);
+  await safeSave(updated);
   return NextResponse.json(updated);
 }

@@ -4,7 +4,11 @@ import path from "path";
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data", "user");
 
 async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+  } catch {
+    // Directory might already exist or permission denied
+  }
 }
 
 function filePath(name: string) {

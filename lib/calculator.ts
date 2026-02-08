@@ -1,4 +1,4 @@
-import type { SalaryBreakdown, BudgetCategory } from "./types";
+import type { SalaryBreakdown, BudgetCategory, BudgetPeriod } from "./types";
 
 /**
  * 일본 급여 계산 (2025~2026년 기준 근사치)
@@ -98,19 +98,53 @@ function calcProgressiveTax(taxable: number): number {
   return 0;
 }
 
-/** 토치기현 기준 기본 생활비 */
+/** 기간별 기본 생활비 프리셋 */
+export const BUDGET_PERIOD_LABELS: Record<BudgetPeriod, string> = {
+  "apr-jul": "4~7월 (연수/실습)",
+  "aug-dec": "8~12월 (본배속)",
+  "year2": "2년차~",
+};
+
+export const BUDGET_PERIOD_INCOME: Record<BudgetPeriod, number> = {
+  "apr-jul": 220000,
+  "aug-dec": 220000,
+  "year2": 190000,
+};
+
+export function getBudgetByPeriod(period: BudgetPeriod): BudgetCategory[] {
+  switch (period) {
+    case "apr-jul":
+      return [
+        { id: "fixed", label: "고정비 (주거/통신/공과금/구독)", amount: 45000, icon: "🏠" },
+        { id: "food", label: "식비 (마트/편의점/외식)", amount: 40000, icon: "🍱" },
+        { id: "living", label: "생활/건강 (생필품/의료)", amount: 5000, icon: "🧴" },
+        { id: "hobby", label: "취미/쇼핑 (게임/옷/유흥)", amount: 30000, icon: "🎮" },
+        { id: "nisa", label: "新NISA 적립", amount: 30000, icon: "📈" },
+        { id: "car-save", label: "차량 저축 (8월 구입용)", amount: 60000, icon: "🚗" },
+      ];
+    case "aug-dec":
+      return [
+        { id: "fixed", label: "고정비 (주거/통신/공과금)", amount: 45000, icon: "🏠" },
+        { id: "food", label: "식비 (마트/외식/편의점)", amount: 40000, icon: "🍱" },
+        { id: "hobby", label: "취미/쇼핑 (게임/옷/유흥)", amount: 30000, icon: "🎮" },
+        { id: "living", label: "생활/건강 (생필품/의료)", amount: 15000, icon: "🧴" },
+        { id: "car", label: "자동차 (할부/보험/기름값)", amount: 50000, icon: "🚗" },
+        { id: "nisa", label: "新NISA 적립", amount: 30000, icon: "📈" },
+        { id: "reserve", label: "예비비 (비상금)", amount: 10000, icon: "🔒" },
+      ];
+    case "year2":
+      return [
+        { id: "fixed", label: "고정비 (공과금/통신/구독)", amount: 20000, icon: "🏠" },
+        { id: "variable", label: "변동비 (식비/취미/쇼핑/의료)", amount: 85000, icon: "🍱" },
+        { id: "car", label: "차량 유지 (할부/보험/유류)", amount: 50000, icon: "🚗" },
+        { id: "nisa", label: "新NISA 투자 (츠미타테)", amount: 35000, icon: "📈" },
+      ];
+  }
+}
+
+/** 토치기현 기준 기본 생활비 (기본값: 4~7월) */
 export function getDefaultBudget(): BudgetCategory[] {
-  return [
-    { id: "rent", label: "집세 (가賃)", amount: 45000, icon: "🏠" },
-    { id: "food", label: "식비 (食費)", amount: 30000, icon: "🍱" },
-    { id: "utilities", label: "공과금 (光熱費)", amount: 10000, icon: "💡" },
-    { id: "phone", label: "통신비 (通信費)", amount: 5000, icon: "📱" },
-    { id: "transport", label: "교통비 (交通費)", amount: 10000, icon: "🚗" },
-    { id: "insurance", label: "보험/연금 (天引)", amount: 0, icon: "🏥" },
-    { id: "daily", label: "일용품 (日用品)", amount: 5000, icon: "🧴" },
-    { id: "entertainment", label: "여가/취미 (娯楽)", amount: 15000, icon: "🎮" },
-    { id: "savings", label: "저축/송금 (貯金)", amount: 30000, icon: "💰" },
-  ];
+  return getBudgetByPeriod("apr-jul");
 }
 
 /** 환율 수동 변환 */

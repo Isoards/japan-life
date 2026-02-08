@@ -9,6 +9,9 @@ const navLinks = [
   { href: "/checklist", label: "체크리스트" },
   { href: "/calculator", label: "계산기" },
   { href: "/guide", label: "생활 가이드" },
+  { href: "/map", label: "활동 지도" },
+  { href: "/expenses", label: "가계부" },
+  { href: "/notes", label: "메모장" },
 ];
 
 export default function Navbar() {
@@ -21,7 +24,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <span className="text-2xl">🇯🇵</span>
             <span className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-              JP 라이프
+              Japan Life
             </span>
           </Link>
           <div className="flex gap-1 items-center overflow-x-auto scrollbar-hide ml-4">

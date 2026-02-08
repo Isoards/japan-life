@@ -2,3 +2,7 @@ node_modules
 .next
 .git
 *.md
+notion
+data/user
+.claude
+nul

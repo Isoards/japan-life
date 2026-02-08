@@ -10,6 +10,14 @@ interface FavoriteArtist {
 
 const STORE_NAME = "favorites";
 
+async function safeSave(data: FavoriteArtist[]): Promise<void> {
+  try {
+    await writeStore(STORE_NAME, data);
+  } catch {
+    // Volume permission issue — skip persisting
+  }
+}
+
 export async function GET() {
   const favorites = await readStore<FavoriteArtist[]>(STORE_NAME, []);
   return NextResponse.json(favorites);
@@ -21,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   if (!favorites.some((f) => f.itunesId === artist.itunesId)) {
     favorites.push(artist);
-    await writeStore(STORE_NAME, favorites);
+    await safeSave(favorites);
   }
 
   return NextResponse.json(favorites);
@@ -31,6 +39,6 @@ export async function DELETE(request: NextRequest) {
   const { itunesId } = await request.json();
   const favorites = await readStore<FavoriteArtist[]>(STORE_NAME, []);
   const updated = favorites.filter((f) => f.itunesId !== itunesId);
-  await writeStore(STORE_NAME, updated);
+  await safeSave(updated);
   return NextResponse.json(updated);
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ITunesTrack } from "@/lib/types";
+import { ITunesTrack, ChecklistItem, MapSpot, Note, BudgetData } from "@/lib/types";
+import { UserConcert } from "@/lib/userConcerts";
 import { getFavorites, FavoriteArtist } from "@/lib/favorites";
 import { getHighResArtwork, formatDuration } from "@/lib/itunes";
 import MusicButton from "@/components/MusicButton";
@@ -16,6 +17,14 @@ interface SearchResult {
   genres: string[];
 }
 
+interface DashboardData {
+  checklist: ChecklistItem[];
+  concerts: UserConcert[];
+  notes: Note[];
+  spots: MapSpot[];
+  budget: BudgetData | null;
+}
+
 export default function DashboardClient() {
   const [favorites, setFavorites] = useState<FavoriteArtist[]>([]);
   const [newReleases, setNewReleases] = useState<ITunesTrack[]>([]);
@@ -23,6 +32,13 @@ export default function DashboardClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [data, setData] = useState<DashboardData>({
+    checklist: [],
+    concerts: [],
+    notes: [],
+    spots: [],
+    budget: null,
+  });
 
   const loadFavorites = useCallback(() => {
     getFavorites().then(setFavorites);
@@ -32,6 +48,25 @@ export default function DashboardClient() {
   useEffect(() => {
     loadFavorites();
   }, [loadFavorites]);
+
+  // Load dashboard summary data
+  useEffect(() => {
+    Promise.allSettled([
+      fetch("/api/checklist").then((r) => r.json()),
+      fetch("/api/user-concerts").then((r) => r.json()),
+      fetch("/api/notes").then((r) => r.json()),
+      fetch("/api/spots").then((r) => r.json()),
+      fetch("/api/budget").then((r) => r.json()),
+    ]).then(([checklist, concerts, notes, spots, budget]) => {
+      setData({
+        checklist: checklist.status === "fulfilled" ? checklist.value : [],
+        concerts: concerts.status === "fulfilled" ? concerts.value : [],
+        notes: notes.status === "fulfilled" ? notes.value : [],
+        spots: spots.status === "fulfilled" ? spots.value : [],
+        budget: budget.status === "fulfilled" ? budget.value : null,
+      });
+    });
+  }, []);
 
   // Fetch new releases when favorites change
   useEffect(() => {
@@ -84,16 +119,129 @@ export default function DashboardClient() {
     return () => window.removeEventListener("focus", onFocus);
   }, [loadFavorites]);
 
+  // Derived stats
+  const checkedCount = data.checklist.filter((c) => c.checked).length;
+  const totalChecklist = data.checklist.length;
+  const checklistPct = totalChecklist > 0 ? Math.round((checkedCount / totalChecklist) * 100) : 0;
+  const highPriorityLeft = data.checklist.filter((c) => c.priority === "high" && !c.checked).length;
+
+  const today = new Date().toISOString().split("T")[0];
+  const upcomingConcerts = data.concerts
+    .filter((c) => c.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const nextConcert = upcomingConcerts[0] || null;
+
+  const budgetTotal = data.budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
+  const budgetIncome = data.budget?.income ?? 0;
+  const budgetRemaining = budgetIncome - budgetTotal;
+
   return (
     <div className="space-y-10">
       {/* Hero + Search */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-          J-Pop 대시보드
+          Japan Life
         </h1>
         <p className="text-gray-400 max-w-xl mx-auto">
-          아티스트를 검색하고, 즐겨찾기에 추가하고, 최신 발매를 확인하세요.
+          일본 생활 대시보드
         </p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Checklist */}
+        <Link href="/checklist">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-emerald-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">✅</span>
+              <span className="text-sm font-medium text-gray-400">체크리스트</span>
+            </div>
+            <div className="text-2xl font-bold text-white mb-1">{checklistPct}%</div>
+            <div className="w-full h-1.5 rounded-full bg-white/10 mb-2">
+              <div
+                className="h-full rounded-full bg-emerald-400 transition-all"
+                style={{ width: `${checklistPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              {checkedCount}/{totalChecklist} 완료
+              {highPriorityLeft > 0 && (
+                <span className="text-amber-400 ml-1">({highPriorityLeft} 중요)</span>
+              )}
+            </p>
+          </div>
+        </Link>
+
+        {/* Budget */}
+        <Link href="/calculator">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-blue-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">💰</span>
+              <span className="text-sm font-medium text-gray-400">예산</span>
+            </div>
+            {budgetIncome > 0 ? (
+              <>
+                <div className="text-2xl font-bold text-white mb-1">
+                  ¥{budgetRemaining.toLocaleString()}
+                </div>
+                <p className="text-xs text-gray-500">
+                  ¥{budgetIncome.toLocaleString()} 중 ¥{budgetTotal.toLocaleString()} 지출
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-gray-600 mb-1">--</div>
+                <p className="text-xs text-gray-500">예산을 설정하세요</p>
+              </>
+            )}
+          </div>
+        </Link>
+
+        {/* Concerts */}
+        <Link href="/concerts">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-purple-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">🎵</span>
+              <span className="text-sm font-medium text-gray-400">콘서트</span>
+            </div>
+            {nextConcert ? (
+              <>
+                <div className="text-sm font-bold text-white mb-1 truncate">{nextConcert.title}</div>
+                <p className="text-xs text-gray-500 truncate">{nextConcert.date} · {nextConcert.venue}</p>
+                <p className="text-xs text-purple-400 mt-1">
+                  {upcomingConcerts.length}개 예정
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-gray-600 mb-1">{data.concerts.length}</div>
+                <p className="text-xs text-gray-500">
+                  {data.concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가하세요"}
+                </p>
+              </>
+            )}
+          </div>
+        </Link>
+
+        {/* Notes & Spots */}
+        <Link href="/notes">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-amber-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">📝</span>
+              <span className="text-sm font-medium text-gray-400">메모 / 장소</span>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <div className="text-2xl font-bold text-white">{data.notes.length}</div>
+                <p className="text-xs text-gray-500">메모</p>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">{data.spots.length}</div>
+                <p className="text-xs text-gray-500">장소</p>
+              </div>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Inline Search */}

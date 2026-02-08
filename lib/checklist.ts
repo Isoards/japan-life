@@ -5,6 +5,7 @@ export const CATEGORY_LABELS: Record<ChecklistCategory, string> = {
   "post-arrival": "도착 후 수속",
   "living-setup": "생활 세팅",
   workplace: "직장 관련",
+  finance: "금융/절세",
 };
 
 export const CATEGORY_ICONS: Record<ChecklistCategory, string> = {
@@ -12,6 +13,7 @@ export const CATEGORY_ICONS: Record<ChecklistCategory, string> = {
   "post-arrival": "🛬",
   "living-setup": "🏠",
   workplace: "💼",
+  finance: "💰",
 };
 
 export const PRIORITY_LABELS: Record<ChecklistPriority, string> = {
