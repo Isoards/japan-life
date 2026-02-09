@@ -1,19 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import {
-  getUserConcerts,
-  addUserConcert,
-  updateUserConcert,
-  deleteUserConcert,
-  UserConcert,
-} from "@/lib/userConcerts";
+import { UserConcert } from "@/lib/userConcerts";
+import { useConcerts, mutateAPI } from "@/lib/hooks/use-api";
 
 export default function ConcertsPage() {
   const [view, setView] = useState<"calendar" | "list">("calendar");
-  const [concerts, setConcerts] = useState<UserConcert[]>([]);
+  const { data: concerts = [], mutate } = useConcerts();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -24,14 +19,6 @@ export default function ConcertsPage() {
   const [formVenue, setFormVenue] = useState("");
   const [formCity, setFormCity] = useState("");
   const [formMemo, setFormMemo] = useState("");
-
-  const loadConcerts = () => {
-    getUserConcerts().then(setConcerts);
-  };
-
-  useEffect(() => {
-    loadConcerts();
-  }, []);
 
   const concertDates = useMemo(
     () => new Set(concerts.map((c) => new Date(c.date).toDateString())),
@@ -82,31 +69,27 @@ export default function ConcertsPage() {
     e.preventDefault();
     if (!formTitle.trim() || !formDate) return;
 
+    const body = {
+      title: formTitle.trim(),
+      date: formDate,
+      venue: formVenue.trim(),
+      city: formCity.trim(),
+      memo: formMemo.trim(),
+    };
+
     if (editingId) {
-      await updateUserConcert(editingId, {
-        title: formTitle.trim(),
-        date: formDate,
-        venue: formVenue.trim(),
-        city: formCity.trim(),
-        memo: formMemo.trim(),
-      });
+      await mutateAPI("/api/user-concerts", "PATCH", { id: editingId, ...body });
     } else {
-      await addUserConcert({
-        title: formTitle.trim(),
-        date: formDate,
-        venue: formVenue.trim(),
-        city: formCity.trim(),
-        memo: formMemo.trim(),
-      });
+      await mutateAPI("/api/user-concerts", "POST", body);
     }
-    loadConcerts();
+    mutate();
     setShowForm(false);
     resetForm();
   };
 
   const handleDelete = async (id: string) => {
-    await deleteUserConcert(id);
-    loadConcerts();
+    await mutateAPI("/api/user-concerts", "DELETE", { id });
+    mutate();
   };
 
   const tileContent = ({ date, view: v }: { date: Date; view: string }) => {

@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  isFavorite,
-  addFavorite,
-  removeFavorite,
-  FavoriteArtist,
-} from "@/lib/favorites";
+import { FavoriteArtist } from "@/lib/favorites";
+import { useFavorites, mutateAPI } from "@/lib/hooks/use-api";
 
 interface FavoriteButtonProps {
   artist: FavoriteArtist;
@@ -19,20 +14,16 @@ export default function FavoriteButton({
   size = "sm",
   onToggle,
 }: FavoriteButtonProps) {
-  const [favorited, setFavorited] = useState(false);
-
-  useEffect(() => {
-    isFavorite(artist.itunesId).then(setFavorited);
-  }, [artist.itunesId]);
+  const { data: favorites = [], mutate } = useFavorites();
+  const favorited = favorites.some((f) => f.itunesId === artist.itunesId);
 
   const toggle = async () => {
     if (favorited) {
-      await removeFavorite(artist.itunesId);
-      setFavorited(false);
+      await mutateAPI("/api/favorites", "DELETE", { itunesId: artist.itunesId });
     } else {
-      await addFavorite(artist);
-      setFavorited(true);
+      await mutateAPI("/api/favorites", "POST", artist);
     }
+    mutate();
     onToggle?.();
   };
 

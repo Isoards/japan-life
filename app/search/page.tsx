@@ -1,52 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import FavoriteButton from "@/components/FavoriteButton";
-
-interface SearchResult {
-  itunesId: number;
-  name: string;
-  imageUrl: string | null;
-  genres: string[];
-}
+import { useSearch } from "@/lib/hooks/use-api";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const search = useCallback(async (q: string) => {
-    if (q.trim().length === 0) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
-      const data = await res.json();
-      setResults(data);
-      setSearched(true);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: results = [], isLoading: loading } = useSearch(debouncedQuery);
+  const searched = debouncedQuery.length >= 2;
 
-  // Debounced search
+  // Debounce
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([]);
-      setSearched(false);
+      setDebouncedQuery("");
       return;
     }
-    const timer = setTimeout(() => search(query), 400);
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 400);
     return () => clearTimeout(timer);
-  }, [query, search]);
+  }, [query]);
 
   return (
     <div className="space-y-6">
@@ -150,7 +125,7 @@ export default function SearchPage() {
 
       {!loading && searched && results.length === 0 && (
         <p className="text-gray-500 text-center py-8">
-          &ldquo;{query}&rdquo;에 대한 검색 결과가 없습니다
+          &ldquo;{debouncedQuery}&rdquo;에 대한 검색 결과가 없습니다
         </p>
       )}
     </div>

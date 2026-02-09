@@ -1,138 +1,64 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ITunesTrack, ChecklistItem, MapSpot, Note, BudgetData } from "@/lib/types";
-import { UserConcert } from "@/lib/userConcerts";
-import { getFavorites, FavoriteArtist } from "@/lib/favorites";
 import { getHighResArtwork, formatDuration } from "@/lib/itunes";
 import MusicButton from "@/components/MusicButton";
 import FavoriteButton from "@/components/FavoriteButton";
-
-interface SearchResult {
-  itunesId: number;
-  name: string;
-  imageUrl: string | null;
-  genres: string[];
-}
-
-interface DashboardData {
-  checklist: ChecklistItem[];
-  concerts: UserConcert[];
-  notes: Note[];
-  spots: MapSpot[];
-  budget: BudgetData | null;
-}
+import {
+  useFavorites,
+  useChecklist,
+  useConcerts,
+  useNotes,
+  useSpots,
+  useBudget,
+  useReleases,
+  useSearch,
+} from "@/lib/hooks/use-api";
 
 export default function DashboardClient() {
-  const [favorites, setFavorites] = useState<FavoriteArtist[]>([]);
-  const [newReleases, setNewReleases] = useState<ITunesTrack[]>([]);
-  const [releasesLoading, setReleasesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [data, setData] = useState<DashboardData>({
-    checklist: [],
-    concerts: [],
-    notes: [],
-    spots: [],
-    budget: null,
-  });
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const loadFavorites = useCallback(() => {
-    getFavorites().then(setFavorites);
-  }, []);
+  const { data: favorites = [] } = useFavorites();
+  const { data: checklist = [] } = useChecklist();
+  const { data: concerts = [] } = useConcerts();
+  const { data: notes = [] } = useNotes();
+  const { data: spots = [] } = useSpots();
+  const { data: budget } = useBudget();
 
-  // Load favorites
-  useEffect(() => {
-    loadFavorites();
-  }, [loadFavorites]);
+  const releaseIds = useMemo(
+    () => (favorites.length > 0 ? favorites.map((f) => f.itunesId).join(",") : null),
+    [favorites],
+  );
+  const { data: newReleases = [], isLoading: releasesLoading } = useReleases(releaseIds);
+  const { data: searchResults = [], isLoading: searching } = useSearch(debouncedQuery);
 
-  // Load dashboard summary data
-  useEffect(() => {
-    Promise.allSettled([
-      fetch("/api/checklist").then((r) => r.json()),
-      fetch("/api/user-concerts").then((r) => r.json()),
-      fetch("/api/notes").then((r) => r.json()),
-      fetch("/api/spots").then((r) => r.json()),
-      fetch("/api/budget").then((r) => r.json()),
-    ]).then(([checklist, concerts, notes, spots, budget]) => {
-      setData({
-        checklist: checklist.status === "fulfilled" ? checklist.value : [],
-        concerts: concerts.status === "fulfilled" ? concerts.value : [],
-        notes: notes.status === "fulfilled" ? notes.value : [],
-        spots: spots.status === "fulfilled" ? spots.value : [],
-        budget: budget.status === "fulfilled" ? budget.value : null,
-      });
-    });
-  }, []);
-
-  // Fetch new releases when favorites change
-  useEffect(() => {
-    if (favorites.length === 0) {
-      setNewReleases([]);
-      return;
-    }
-    setReleasesLoading(true);
-    const ids = favorites.map((f) => f.itunesId).join(",");
-    fetch(`/api/releases?ids=${ids}&limit=10`)
-      .then((res) => res.json())
-      .then((data) => setNewReleases(data))
-      .catch(() => setNewReleases([]))
-      .finally(() => setReleasesLoading(false));
-  }, [favorites]);
-
-  // Debounced search
-  const search = useCallback(async (q: string) => {
-    if (q.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(q.trim())}`
-      );
-      const data = await res.json();
-      setSearchResults(data);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
+  // Debounce search query
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
+      setDebouncedQuery("");
       return;
     }
-    const timer = setTimeout(() => search(searchQuery), 400);
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, search]);
-
-  // Re-read favorites when returning focus
-  useEffect(() => {
-    const onFocus = () => loadFavorites();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [loadFavorites]);
+  }, [searchQuery]);
 
   // Derived stats
-  const checkedCount = data.checklist.filter((c) => c.checked).length;
-  const totalChecklist = data.checklist.length;
+  const checkedCount = checklist.filter((c) => c.checked).length;
+  const totalChecklist = checklist.length;
   const checklistPct = totalChecklist > 0 ? Math.round((checkedCount / totalChecklist) * 100) : 0;
-  const highPriorityLeft = data.checklist.filter((c) => c.priority === "high" && !c.checked).length;
+  const highPriorityLeft = checklist.filter((c) => c.priority === "high" && !c.checked).length;
 
   const today = new Date().toISOString().split("T")[0];
-  const upcomingConcerts = data.concerts
+  const upcomingConcerts = concerts
     .filter((c) => c.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
   const nextConcert = upcomingConcerts[0] || null;
 
-  const budgetTotal = data.budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
-  const budgetIncome = data.budget?.income ?? 0;
+  const budgetTotal = budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
+  const budgetIncome = budget?.income ?? 0;
   const budgetRemaining = budgetIncome - budgetTotal;
 
   return (
@@ -214,9 +140,9 @@ export default function DashboardClient() {
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold text-gray-600 mb-1">{data.concerts.length}</div>
+                <div className="text-2xl font-bold text-gray-600 mb-1">{concerts.length}</div>
                 <p className="text-xs text-gray-500">
-                  {data.concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가하세요"}
+                  {concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가하세요"}
                 </p>
               </>
             )}
@@ -232,11 +158,11 @@ export default function DashboardClient() {
             </div>
             <div className="flex gap-4">
               <div>
-                <div className="text-2xl font-bold text-white">{data.notes.length}</div>
+                <div className="text-2xl font-bold text-white">{notes.length}</div>
                 <p className="text-xs text-gray-500">메모</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{data.spots.length}</div>
+                <div className="text-2xl font-bold text-white">{spots.length}</div>
                 <p className="text-xs text-gray-500">장소</p>
               </div>
             </div>

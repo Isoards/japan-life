@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import type { ChecklistItem, ChecklistCategory, ChecklistPriority } from "@/lib/types";
 import {
   CATEGORY_LABELS,
   CATEGORY_ICONS,
   PRIORITY_LABELS,
   PRIORITY_COLORS,
-  fetchChecklist,
-  toggleChecklistItem,
-  addChecklistItem,
-  updateChecklistItem,
-  deleteChecklistItem,
 } from "@/lib/checklist";
+import { useChecklist, mutateAPI } from "@/lib/hooks/use-api";
 
 const ALL_CATEGORIES: ChecklistCategory[] = [
   "pre-departure",
@@ -23,27 +19,16 @@ const ALL_CATEGORIES: ChecklistCategory[] = [
 ];
 
 export default function ChecklistPage() {
-  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const { data: items = [], isLoading: loading, mutate } = useChecklist();
   const [filter, setFilter] = useState<ChecklistCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // form fields (shared for add/edit)
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState<ChecklistCategory>("pre-departure");
   const [formPriority, setFormPriority] = useState<ChecklistPriority>("medium");
-
-  const load = useCallback(async () => {
-    const data = await fetchChecklist();
-    setItems(data);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const resetForm = () => {
     setFormTitle("");
@@ -55,22 +40,19 @@ export default function ChecklistPage() {
   };
 
   const handleToggle = async (id: string, checked: boolean) => {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, checked: !checked } : i))
-    );
-    const updated = await toggleChecklistItem(id, !checked);
-    setItems(updated);
+    await mutateAPI("/api/checklist", "PATCH", { id, checked: !checked });
+    mutate();
   };
 
   const handleAdd = async () => {
     if (!formTitle.trim()) return;
-    const updated = await addChecklistItem({
+    await mutateAPI("/api/checklist", "POST", {
       title: formTitle.trim(),
       description: formDesc.trim() || undefined,
       category: formCategory,
       priority: formPriority,
     });
-    setItems(updated);
+    mutate();
     resetForm();
   };
 
@@ -85,19 +67,20 @@ export default function ChecklistPage() {
 
   const handleEdit = async () => {
     if (!editingId || !formTitle.trim()) return;
-    const updated = await updateChecklistItem(editingId, {
+    await mutateAPI("/api/checklist", "PATCH", {
+      id: editingId,
       title: formTitle.trim(),
       description: formDesc.trim() || undefined,
       category: formCategory,
       priority: formPriority,
     });
-    setItems(updated);
+    mutate();
     resetForm();
   };
 
   const handleDelete = async (id: string) => {
-    const updated = await deleteChecklistItem(id);
-    setItems(updated);
+    await mutateAPI("/api/checklist", "DELETE", { id });
+    mutate();
   };
 
   const filtered =

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { Note, NoteCategory, QuickLink } from "@/lib/types";
+import { useState } from "react";
+import type { NoteCategory } from "@/lib/types";
+import { useNotes, useLinks, mutateAPI } from "@/lib/hooks/use-api";
 
 type Tab = "notes" | "links";
 
@@ -51,11 +52,10 @@ export default function NotesPage() {
 
 /* ──── 일본어 메모 ──── */
 function NotesTab() {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const { data: notes = [], isLoading: loading, mutate } = useNotes();
   const [filter, setFilter] = useState<NoteCategory | "all">("all");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   const [formJa, setFormJa] = useState("");
   const [formReading, setFormReading] = useState("");
@@ -63,41 +63,23 @@ function NotesTab() {
   const [formMemo, setFormMemo] = useState("");
   const [formCat, setFormCat] = useState<NoteCategory>("business");
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notes");
-      setNotes(await res.json());
-    } catch { /* empty */ }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   const handleAdd = async () => {
     if (!formJa.trim() || !formKo.trim()) return;
-    const res = await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        japanese: formJa.trim(),
-        reading: formReading.trim() || undefined,
-        korean: formKo.trim(),
-        memo: formMemo.trim() || undefined,
-        category: formCat,
-      }),
+    await mutateAPI("/api/notes", "POST", {
+      japanese: formJa.trim(),
+      reading: formReading.trim() || undefined,
+      korean: formKo.trim(),
+      memo: formMemo.trim() || undefined,
+      category: formCat,
     });
-    setNotes(await res.json());
+    mutate();
     setFormJa(""); setFormReading(""); setFormKo(""); setFormMemo("");
     setShowForm(false);
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch("/api/notes", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setNotes(await res.json());
+    await mutateAPI("/api/notes", "DELETE", { id });
+    mutate();
   };
 
   const filtered = notes
@@ -196,48 +178,29 @@ function NotesTab() {
 
 /* ──── 링크 모음 ──── */
 function LinksTab() {
-  const [links, setLinks] = useState<QuickLink[]>([]);
+  const { data: links = [], isLoading: loading, mutate } = useLinks();
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   const [formTitle, setFormTitle] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [formCategory, setFormCategory] = useState("금융");
   const [formIcon, setFormIcon] = useState("🔗");
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/links");
-      setLinks(await res.json());
-    } catch { /* empty */ }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   const handleAdd = async () => {
     if (!formTitle.trim() || !formUrl.trim()) return;
-    const res = await fetch("/api/links", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: formTitle.trim(),
-        url: formUrl.trim(),
-        category: formCategory.trim(),
-        icon: formIcon || "🔗",
-      }),
+    await mutateAPI("/api/links", "POST", {
+      title: formTitle.trim(),
+      url: formUrl.trim(),
+      category: formCategory.trim(),
+      icon: formIcon || "🔗",
     });
-    setLinks(await res.json());
+    mutate();
     setFormTitle(""); setFormUrl(""); setShowForm(false);
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch("/api/links", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setLinks(await res.json());
+    await mutateAPI("/api/links", "DELETE", { id });
+    mutate();
   };
 
   if (loading) return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;

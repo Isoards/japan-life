@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import type { SalaryBreakdown, BudgetCategory, BudgetData, BudgetPeriod } from "@/lib/types";
 import { calculateSalary, getDefaultBudget, convertCurrency, getBudgetByPeriod, BUDGET_PERIOD_LABELS, BUDGET_PERIOD_INCOME } from "@/lib/calculator";
+import { useBudget, mutateAPI } from "@/lib/hooks/use-api";
 
 type Tab = "salary" | "budget" | "exchange";
 
@@ -258,41 +259,24 @@ function SalaryTab() {
 const ALL_PERIODS: BudgetPeriod[] = ["apr-jul", "aug-dec", "year2"];
 
 function BudgetTab() {
+  const { data: budgetData, isLoading } = useBudget();
   const [period, setPeriod] = useState<BudgetPeriod>("apr-jul");
   const [categories, setCategories] = useState<BudgetCategory[]>(getDefaultBudget());
   const [income, setIncome] = useState<string>("220000");
-  const [loaded, setLoaded] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/budget");
-      const data: BudgetData = await res.json();
-      if (data.categories.length > 0) {
-        setCategories(data.categories);
-      }
-      if (data.income > 0) {
-        setIncome(String(data.income));
-      }
-      if (data.period) {
-        setPeriod(data.period);
-      }
-      setLoaded(true);
-    } catch {
-      setLoaded(true);
-    }
-  }, []);
-
+  // Sync local state when SWR data arrives
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!budgetData || initialized) return;
+    if (budgetData.categories.length > 0) setCategories(budgetData.categories);
+    if (budgetData.income > 0) setIncome(String(budgetData.income));
+    if (budgetData.period) setPeriod(budgetData.period);
+    setInitialized(true);
+  }, [budgetData, initialized]);
 
   const save = async (cats: BudgetCategory[], inc: string, p: BudgetPeriod) => {
     const incVal = parseInt(inc) || 0;
-    await fetch("/api/budget", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ income: incVal, categories: cats, period: p }),
-    });
+    await mutateAPI("/api/budget", "POST", { income: incVal, categories: cats, period: p });
   };
 
   const switchPeriod = (p: BudgetPeriod) => {
@@ -317,7 +301,7 @@ function BudgetTab() {
   const remaining = incomeVal - totalExpense;
   const fmt = (n: number) => n.toLocaleString("ja-JP");
 
-  if (!loaded) {
+  if (isLoading) {
     return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;
   }
 

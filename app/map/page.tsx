@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { MapSpot, SpotCategory } from "@/lib/types";
+import { useState, useCallback } from "react";
+import type { SpotCategory } from "@/lib/types";
 import GoogleMapView from "@/components/GoogleMapView";
+import { useSpots, mutateAPI } from "@/lib/hooks/use-api";
 
 const SPOT_CATEGORIES: { key: SpotCategory; label: string; icon: string }[] = [
   { key: "food", label: "맛집", icon: "🍜" },
@@ -19,11 +20,10 @@ const AREAS = [
 ];
 
 export default function MapPage() {
-  const [spots, setSpots] = useState<MapSpot[]>([]);
+  const { data: spots = [], isLoading: loading, mutate } = useSpots();
   const [area, setArea] = useState<"yokohama" | "tochigi">("yokohama");
   const [filter, setFilter] = useState<SpotCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Form
   const [formName, setFormName] = useState("");
@@ -34,16 +34,6 @@ export default function MapPage() {
   const [formLat, setFormLat] = useState<number | null>(null);
   const [formLng, setFormLng] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/spots");
-      setSpots(await res.json());
-    } catch { /* empty */ }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   const handleMapClick = useCallback((lat: number, lng: number) => {
     setFormLat(lat);
     setFormLng(lng);
@@ -53,33 +43,25 @@ export default function MapPage() {
   const handleAdd = async () => {
     if (!formName.trim()) return;
     const currentArea = AREAS.find((a) => a.key === area)!;
-    const res = await fetch("/api/spots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formName.trim(),
-        category: formCategory,
-        lat: formLat ?? currentArea.lat,
-        lng: formLng ?? currentArea.lng,
-        memo: formMemo.trim() || undefined,
-        date: formDate || undefined,
-        address: formAddress.trim() || undefined,
-        area,
-      }),
+    await mutateAPI("/api/spots", "POST", {
+      name: formName.trim(),
+      category: formCategory,
+      lat: formLat ?? currentArea.lat,
+      lng: formLng ?? currentArea.lng,
+      memo: formMemo.trim() || undefined,
+      date: formDate || undefined,
+      address: formAddress.trim() || undefined,
+      area,
     });
-    setSpots(await res.json());
+    mutate();
     setFormName(""); setFormMemo(""); setFormDate(""); setFormAddress("");
     setFormLat(null); setFormLng(null);
     setShowForm(false);
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch("/api/spots", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setSpots(await res.json());
+    await mutateAPI("/api/spots", "DELETE", { id });
+    mutate();
   };
 
   const currentArea = AREAS.find((a) => a.key === area)!;
