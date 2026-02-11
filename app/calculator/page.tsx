@@ -1,9 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { SalaryBreakdown, BudgetCategory, BudgetData, BudgetPeriod } from "@/lib/types";
-import { calculateSalary, getDefaultBudget, convertCurrency, getBudgetByPeriod, BUDGET_PERIOD_LABELS, BUDGET_PERIOD_INCOME } from "@/lib/calculator";
-import { useBudget, mutateAPI } from "@/lib/hooks/use-api";
+import type {
+  SalaryBreakdown,
+  BudgetCategory,
+  BudgetData,
+  BudgetPeriod,
+} from "@/lib/types";
+import {
+  calculateSalary,
+  getDefaultBudget,
+  convertCurrency,
+  getBudgetByPeriod,
+  BUDGET_PERIOD_LABELS,
+  BUDGET_PERIOD_INCOME,
+} from "@/lib/calculator";
+import { useBudget, useExchangeRate, mutateAPI } from "@/lib/hooks/use-api";
 
 type Tab = "salary" | "budget" | "exchange";
 
@@ -23,11 +35,13 @@ export default function CalculatorPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-        {([
-          { key: "salary", label: "💴 급여 계산기", },
-          { key: "budget", label: "🏠 생활비 플래너" },
-          { key: "exchange", label: "💱 환율 계산기" },
-        ] as const).map((t) => (
+        {(
+          [
+            { key: "salary", label: "💴 급여 계산기" },
+            { key: "budget", label: "🏠 생활비 플래너" },
+            { key: "exchange", label: "💱 환율 계산기" },
+          ] as const
+        ).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -51,8 +65,8 @@ export default function CalculatorPage() {
 
 /* ──────────── 급여 계산기 ──────────── */
 function SalaryTab() {
-  const [monthly, setMonthly] = useState<string>("250000");
-  const [bonusMonths, setBonusMonths] = useState<string>("2");
+  const [monthly, setMonthly] = useState<string>("270000");
+  const [bonusMonths, setBonusMonths] = useState<string>("6.9");
   const [result, setResult] = useState<SalaryBreakdown | null>(null);
 
   useEffect(() => {
@@ -113,7 +127,9 @@ function SalaryTab() {
               className="w-24 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-lg font-mono focus:outline-none focus:border-purple-500/50"
               placeholder="2"
             />
-            <span className="text-gray-400 text-sm">개월분 (연 2회 지급 가정)</span>
+            <span className="text-gray-400 text-sm">
+              개월분 (연 2회 지급 가정)
+            </span>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             {[0, 1, 2, 3, 4].map((v) => (
@@ -129,7 +145,8 @@ function SalaryTab() {
         </div>
         {result && (
           <div className="text-xs text-gray-500 pt-2 border-t border-white/10">
-            연봉 환산: ¥{fmt(result.grossAnnual)} (월급 ¥{fmt(result.grossMonthly)} x {12 + result.bonusMonths}개월)
+            연봉 환산: ¥{fmt(result.grossAnnual)} (월급 ¥
+            {fmt(result.grossMonthly)} x {12 + result.bonusMonths}개월)
           </div>
         )}
       </div>
@@ -144,12 +161,15 @@ function SalaryTab() {
                 ¥{fmt(result.netMonthly)}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                월급 ¥{fmt(result.grossMonthly)} 중 ¥{fmt(result.totalDeductions)} 공제
+                월급 ¥{fmt(result.grossMonthly)} 중 ¥
+                {fmt(result.totalDeductions)} 공제
               </div>
             </div>
             {result.bonusMonths > 0 && (
               <div className="text-center p-4 rounded-xl bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-white/10">
-                <div className="text-sm text-gray-400">보너스 실수령액 (1회)</div>
+                <div className="text-sm text-gray-400">
+                  보너스 실수령액 (1회)
+                </div>
                 <div className="text-3xl font-bold text-white mt-1">
                   ¥{fmt(result.bonusNetPerPayment)}
                 </div>
@@ -167,27 +187,55 @@ function SalaryTab() {
               ¥{fmt(result.netAnnual)}
             </span>
             <span className="text-xs text-gray-500 ml-2">
-              (월 ¥{fmt(result.netMonthly)} x 12{result.bonusMonths > 0 && ` + 보너스 ¥${fmt(result.bonusNetPerPayment)} x 2`})
+              (월 ¥{fmt(result.netMonthly)} x 12
+              {result.bonusMonths > 0 &&
+                ` + 보너스 ¥${fmt(result.bonusNetPerPayment)} x 2`}
+              )
             </span>
           </div>
 
           {/* Deduction breakdown */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-400">월급 공제 내역</h3>
+              <h3 className="text-sm font-medium text-gray-400">
+                월급 공제 내역
+              </h3>
               {[
-                { label: "소득세 (所得税)", value: result.incomeTax, color: "bg-red-500" },
-                { label: "주민세 (住民税)", value: result.residentTax, color: "bg-orange-500" },
-                { label: "건강보험 (健康保険)", value: result.healthInsurance, color: "bg-blue-500" },
-                { label: "후생연금 (厚生年金)", value: result.pension, color: "bg-purple-500" },
-                { label: "고용보험 (雇用保険)", value: result.employmentInsurance, color: "bg-green-500" },
+                {
+                  label: "소득세 (所得税)",
+                  value: result.incomeTax,
+                  color: "bg-red-500",
+                },
+                {
+                  label: "주민세 (住民税)",
+                  value: result.residentTax,
+                  color: "bg-orange-500",
+                },
+                {
+                  label: "건강보험 (健康保険)",
+                  value: result.healthInsurance,
+                  color: "bg-blue-500",
+                },
+                {
+                  label: "후생연금 (厚生年金)",
+                  value: result.pension,
+                  color: "bg-purple-500",
+                },
+                {
+                  label: "고용보험 (雇用保険)",
+                  value: result.employmentInsurance,
+                  color: "bg-green-500",
+                },
               ].map((item) => {
-                const pct = result.grossMonthly > 0
-                  ? ((item.value / result.grossMonthly) * 100).toFixed(1)
-                  : "0";
+                const pct =
+                  result.grossMonthly > 0
+                    ? ((item.value / result.grossMonthly) * 100).toFixed(1)
+                    : "0";
                 return (
                   <div key={item.label} className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${item.color} shrink-0`}
+                    />
                     <span className="text-sm text-gray-300 flex-1">
                       {item.label}
                     </span>
@@ -205,8 +253,12 @@ function SalaryTab() {
                 </span>
                 <span className="text-sm text-gray-500">
                   {result.grossMonthly > 0
-                    ? ((result.totalDeductions / result.grossMonthly) * 100).toFixed(1)
-                    : "0"}%
+                    ? (
+                        (result.totalDeductions / result.grossMonthly) *
+                        100
+                      ).toFixed(1)
+                    : "0"}
+                  %
                 </span>
                 <span className="text-sm font-mono font-medium text-pink-400 w-24 text-right">
                   ¥{fmt(result.totalDeductions)}
@@ -246,7 +298,8 @@ function SalaryTab() {
             </div>
 
             <p className="text-xs text-gray-600">
-              * 2025~2026년 기준 근사 계산입니다. 실제 금액은 회사/지역에 따라 다를 수 있습니다.
+              * 2025~2026년 기준 근사 계산입니다. 실제 금액은 회사/지역에 따라
+              다를 수 있습니다.
             </p>
           </div>
         </div>
@@ -261,8 +314,9 @@ const ALL_PERIODS: BudgetPeriod[] = ["apr-jul", "aug-dec", "year2"];
 function BudgetTab() {
   const { data: budgetData, isLoading } = useBudget();
   const [period, setPeriod] = useState<BudgetPeriod>("apr-jul");
-  const [categories, setCategories] = useState<BudgetCategory[]>(getDefaultBudget());
-  const [income, setIncome] = useState<string>("220000");
+  const [categories, setCategories] =
+    useState<BudgetCategory[]>(getDefaultBudget());
+  const [income, setIncome] = useState<string>("270000");
   const [initialized, setInitialized] = useState(false);
 
   // Sync local state when SWR data arrives
@@ -276,7 +330,11 @@ function BudgetTab() {
 
   const save = async (cats: BudgetCategory[], inc: string, p: BudgetPeriod) => {
     const incVal = parseInt(inc) || 0;
-    await mutateAPI("/api/budget", "POST", { income: incVal, categories: cats, period: p });
+    await mutateAPI("/api/budget", "POST", {
+      income: incVal,
+      categories: cats,
+      period: p,
+    });
   };
 
   const switchPeriod = (p: BudgetPeriod) => {
@@ -289,9 +347,7 @@ function BudgetTab() {
   };
 
   const updateAmount = (id: string, amount: number) => {
-    const updated = categories.map((c) =>
-      c.id === id ? { ...c, amount } : c
-    );
+    const updated = categories.map((c) => (c.id === id ? { ...c, amount } : c));
     setCategories(updated);
     save(updated, income, period);
   };
@@ -302,7 +358,9 @@ function BudgetTab() {
   const fmt = (n: number) => n.toLocaleString("ja-JP");
 
   if (isLoading) {
-    return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;
+    return (
+      <div className="text-gray-400 py-10 text-center">불러오는 중...</div>
+    );
   }
 
   return (
@@ -327,8 +385,10 @@ function BudgetTab() {
       {/* Period description */}
       <div className="rounded-xl border border-white/10 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-4">
         <div className="text-sm text-gray-300">
-          {period === "apr-jul" && "연수/실습 기간. 8월 차량 구입을 위해 월 6만엔 저축 목표"}
-          {period === "aug-dec" && "본배속 + 차량 구입. 기존 저축액을 유지비로 전환"}
+          {period === "apr-jul" &&
+            "연수/실습 기간. 8월 차량 구입을 위해 월 6만엔 저축 목표"}
+          {period === "aug-dec" &&
+            "본배속 + 차량 구입. 기존 저축액을 유지비로 전환"}
           {period === "year2" && "안정기. 부양공제 환급금 연 +23만엔 포함"}
         </div>
       </div>
@@ -360,15 +420,21 @@ function BudgetTab() {
         </div>
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
           <div className="text-xs text-gray-500">총 지출</div>
-          <div className="text-lg font-bold text-pink-400">¥{fmt(totalExpense)}</div>
+          <div className="text-lg font-bold text-pink-400">
+            ¥{fmt(totalExpense)}
+          </div>
         </div>
-        <div className={`rounded-xl border p-4 text-center ${
-          remaining >= 0
-            ? "border-emerald-500/20 bg-emerald-500/5"
-            : "border-red-500/20 bg-red-500/5"
-        }`}>
+        <div
+          className={`rounded-xl border p-4 text-center ${
+            remaining >= 0
+              ? "border-emerald-500/20 bg-emerald-500/5"
+              : "border-red-500/20 bg-red-500/5"
+          }`}
+        >
           <div className="text-xs text-gray-500">잔액</div>
-          <div className={`text-lg font-bold ${remaining >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+          <div
+            className={`text-lg font-bold ${remaining >= 0 ? "text-emerald-400" : "text-red-400"}`}
+          >
             ¥{fmt(remaining)}
           </div>
         </div>
@@ -384,11 +450,14 @@ function BudgetTab() {
                   ? "bg-gradient-to-r from-red-500 to-red-400"
                   : "bg-gradient-to-r from-pink-500 to-purple-500"
               }`}
-              style={{ width: `${Math.min((totalExpense / incomeVal) * 100, 100)}%` }}
+              style={{
+                width: `${Math.min((totalExpense / incomeVal) * 100, 100)}%`,
+              }}
             />
           </div>
           <div className="text-xs text-gray-500 text-right">
-            {incomeVal > 0 ? ((totalExpense / incomeVal) * 100).toFixed(0) : 0}% 사용
+            {incomeVal > 0 ? ((totalExpense / incomeVal) * 100).toFixed(0) : 0}%
+            사용
           </div>
         </div>
       )}
@@ -396,7 +465,8 @@ function BudgetTab() {
       {/* Category breakdown */}
       <div className="space-y-2">
         {categories.map((cat) => {
-          const pct = incomeVal > 0 ? ((cat.amount / incomeVal) * 100).toFixed(1) : "0";
+          const pct =
+            incomeVal > 0 ? ((cat.amount / incomeVal) * 100).toFixed(1) : "0";
           return (
             <div
               key={cat.id}
@@ -426,11 +496,15 @@ function BudgetTab() {
       {/* Year 2 tax refund info */}
       {period === "year2" && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-          <h3 className="text-sm font-bold text-emerald-400 mb-2">연말정산 부양공제 환급</h3>
+          <h3 className="text-sm font-bold text-emerald-400 mb-2">
+            연말정산 부양공제 환급
+          </h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <div className="text-gray-500">부양가족 3명</div>
-              <div className="text-white">아빠(38만) + 엄마(38만) + 할머니(48만)</div>
+              <div className="text-white">
+                아빠(38만) + 엄마(38만) + 할머니(48만)
+              </div>
             </div>
             <div>
               <div className="text-gray-500">연간 송금액</div>
@@ -449,7 +523,8 @@ function BudgetTab() {
       )}
 
       <p className="text-xs text-gray-600">
-        * 토치기현 Honda 기준 생활비입니다. 기간 전환 시 프리셋이 적용되며, 항목별 금액을 수정하면 자동 저장됩니다.
+        * 토치기현 Honda 기준 생활비입니다. 기간 전환 시 프리셋이 적용되며,
+        항목별 금액을 수정하면 자동 저장됩니다.
       </p>
     </div>
   );
@@ -457,36 +532,71 @@ function BudgetTab() {
 
 /* ──────────── 환율 계산기 ──────────── */
 function ExchangeTab() {
-  const [rate, setRate] = useState<string>("9.2");
+  const { data: rateData, isLoading: rateLoading, mutate: refreshRateSWR } = useExchangeRate();
+  const [rateOverride, setRateOverride] = useState<string | null>(null);
   const [amount, setAmount] = useState<string>("100000");
-  const [direction, setDirection] = useState<"krw-to-jpy" | "jpy-to-krw">("jpy-to-krw");
+  const [direction, setDirection] = useState<"krw-to-jpy" | "jpy-to-krw">(
+    "jpy-to-krw",
+  );
+
+  const rate = rateOverride ?? (rateData?.rate ? String(rateData.rate) : "");
+  const lastUpdated = rateData && !rateData.fallback
+    ? new Date().toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   const rateVal = parseFloat(rate) || 0;
   const amountVal = parseInt(amount) || 0;
-  const converted = rateVal > 0 ? convertCurrency(amountVal, rateVal, direction) : 0;
+  const converted =
+    rateVal > 0 ? convertCurrency(amountVal, rateVal, direction) : 0;
 
-  const fmt = (n: number) => n.toLocaleString();
+  const fmt = (n: number) => Math.round(n).toLocaleString();
 
   return (
     <div className="space-y-6">
       {/* Rate input */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <label className="block text-sm text-gray-400 mb-2">
-          환율 (100엔 당 원화)
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm text-gray-400">환율 (100엔 당 원화)</label>
+          <button
+            onClick={() => { setRateOverride(null); refreshRateSWR(); }}
+            disabled={rateLoading}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
+          >
+            {rateLoading ? (
+              <div className="w-3 h-3 border border-blue-300 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            )}
+            실시간 환율
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-gray-500">₩</span>
           <input
             type="number"
             step="0.1"
             value={rate}
-            onChange={(e) => setRate(e.target.value)}
+            onChange={(e) => setRateOverride(e.target.value)}
             className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-lg font-mono focus:outline-none focus:border-purple-500/50"
           />
           <span className="text-gray-500 text-sm">/ ¥100</span>
         </div>
         <p className="text-xs text-gray-600 mt-2">
-          * 네이버 또는 구글에서 현재 환율을 확인 후 입력하세요. (예: 100엔 = 920원이면 9.2 입력)
+          {lastUpdated
+            ? `실시간 환율 반영됨 (${lastUpdated} 기준) · 수동 수정 가능`
+            : "실시간 환율을 불러오는 중... 직접 입력도 가능합니다"}
         </p>
       </div>
 
@@ -544,7 +654,8 @@ function ExchangeTab() {
               onClick={() => setAmount(String(v))}
               className="px-3 py-1 rounded-lg text-xs bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
             >
-              {direction === "jpy-to-krw" ? "¥" : "₩"}{fmt(v)}
+              {direction === "jpy-to-krw" ? "¥" : "₩"}
+              {fmt(v)}
             </button>
           ))}
         </div>
@@ -553,19 +664,22 @@ function ExchangeTab() {
         <div className="text-center p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-white/10">
           <div className="text-sm text-gray-400">변환 결과</div>
           <div className="text-3xl font-bold text-white mt-1">
-            {direction === "jpy-to-krw" ? "₩" : "¥"}{fmt(converted)}
+            {direction === "jpy-to-krw" ? "₩" : "¥"}
+            {fmt(converted)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
             {direction === "jpy-to-krw"
-              ? `¥${fmt(amountVal)} x ${rate} = ₩${fmt(converted)}`
-              : `₩${fmt(amountVal)} / ${rate} = ¥${fmt(converted)}`}
+              ? `¥${fmt(amountVal)} → ₩${fmt(converted)} (¥100 = ₩${rate})`
+              : `₩${fmt(amountVal)} → ¥${fmt(converted)} (¥100 = ₩${rate})`}
           </div>
         </div>
       </div>
 
       {/* Common conversions */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-3">자주 쓰는 금액</h3>
+        <h3 className="text-sm font-medium text-gray-400 mb-3">
+          자주 쓰는 금액
+        </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[
             { label: "편의점 도시락", jpy: 500 },
@@ -584,7 +698,7 @@ function ExchangeTab() {
                 ¥{fmt(item.jpy)}
               </div>
               <div className="text-xs text-purple-400 font-mono">
-                ≈ ₩{fmt(Math.round(item.jpy * rateVal))}
+                ≈ ₩{fmt(Math.round((item.jpy * rateVal) / 100))}
               </div>
             </div>
           ))}

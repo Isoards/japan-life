@@ -19,10 +19,14 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
+  if (!body.japanese?.trim()) return NextResponse.json({ error: "일본어 텍스트가 필요합니다" }, { status: 400 });
+  if (!body.korean?.trim()) return NextResponse.json({ error: "한국어 뜻이 필요합니다" }, { status: 400 });
   const notes = await readStore<Note[]>(STORE_NAME, []);
 
   const newNote: Note = {
     ...body,
+    japanese: body.japanese.trim(),
+    korean: body.korean.trim(),
     id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   };
   notes.push(newNote);
@@ -33,12 +37,16 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const { id, ...updates } = await request.json();
+  if (!id) return NextResponse.json({ error: "id가 필요합니다" }, { status: 400 });
   const notes = await readStore<Note[]>(STORE_NAME, []);
   const note = notes.find((n) => n.id === id);
-  if (note) {
-    Object.assign(note, updates);
-    await safeSave(notes);
-  }
+  if (!note) return NextResponse.json({ error: "항목을 찾을 수 없습니다" }, { status: 404 });
+  if (updates.japanese !== undefined) note.japanese = updates.japanese;
+  if (updates.reading !== undefined) note.reading = updates.reading;
+  if (updates.korean !== undefined) note.korean = updates.korean;
+  if (updates.memo !== undefined) note.memo = updates.memo;
+  if (updates.category !== undefined) note.category = updates.category;
+  await safeSave(notes);
   return NextResponse.json(notes);
 }
 

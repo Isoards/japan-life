@@ -1,14 +1,25 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Calendar from "react-calendar";
+import dynamic from "next/dynamic";
+
+const Calendar = dynamic(() => import("react-calendar"), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse rounded-xl bg-white/5 h-[300px]" />
+  ),
+});
 import "react-calendar/dist/Calendar.css";
 import { UserConcert } from "@/lib/userConcerts";
 import { useConcerts, mutateAPI } from "@/lib/hooks/use-api";
+import { useToast } from "@/components/Toast";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function ConcertsPage() {
   const [view, setView] = useState<"calendar" | "list">("calendar");
-  const { data: concerts = [], mutate } = useConcerts();
+  const { data: concerts = [], error, mutate } = useConcerts();
+  const { toast } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,19 +88,22 @@ export default function ConcertsPage() {
       memo: formMemo.trim(),
     };
 
-    if (editingId) {
-      await mutateAPI("/api/user-concerts", "PATCH", { id: editingId, ...body });
-    } else {
-      await mutateAPI("/api/user-concerts", "POST", body);
-    }
+    const res = editingId
+      ? await mutateAPI("/api/user-concerts", "PATCH", { id: editingId, ...body })
+      : await mutateAPI("/api/user-concerts", "POST", body);
+
+    if (res.ok) { toast(editingId ? "일정을 수정했습니다" : "일정을 추가했습니다"); } else { toast(res.error, "error"); }
     mutate();
     setShowForm(false);
     resetForm();
   };
 
-  const handleDelete = async (id: string) => {
-    await mutateAPI("/api/user-concerts", "DELETE", { id });
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const res = await mutateAPI("/api/user-concerts", "DELETE", { id: deleteTarget });
+    if (res.ok) { toast("일정을 삭제했습니다"); } else { toast(res.error, "error"); }
     mutate();
+    setDeleteTarget(null);
   };
 
   const tileContent = ({ date, view: v }: { date: Date; view: string }) => {
@@ -103,8 +117,24 @@ export default function ConcertsPage() {
     return null;
   };
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="text-red-400">데이터를 불러오지 못했습니다</div>
+        <button onClick={() => mutate()} className="px-4 py-2 rounded-lg text-sm bg-white/10 text-white hover:bg-white/15 transition-colors">다시 시도</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="콘서트 삭제"
+        message="이 콘서트 일정을 삭제하시겠습니까?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">내 콘서트</h1>
@@ -278,7 +308,7 @@ export default function ConcertsPage() {
                       key={concert.id}
                       concert={concert}
                       onEdit={startEdit}
-                      onDelete={handleDelete}
+                      onDelete={(id) => setDeleteTarget(id)}
                     />
                   ))}
                 </div>
@@ -350,7 +380,7 @@ export default function ConcertsPage() {
                     </svg>
                   </button>
                   <button
-                    onClick={() => handleDelete(concert.id)}
+                    onClick={() => setDeleteTarget(concert.id)}
                     className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
                     title="삭제"
                   >

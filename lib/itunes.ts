@@ -22,6 +22,7 @@ export async function fetchArtistTracks(
     limit: String(limit + 1),
     sort: "recent",
     country: "jp",
+    lang: "ja_jp",
   });
 
   const res = await fetch(`${ITUNES_API}/lookup?${params}`, {
@@ -51,9 +52,40 @@ export async function fetchArtistTracks(
     }));
 }
 
-export async function fetchArtistImage(
-  itunesId: number
+/** Deezer API로 아티스트 대표 사진을 가져옴 (무료, API 키 불필요) */
+async function fetchDeezerArtistPhoto(
+  ...names: (string | undefined)[]
 ): Promise<string | null> {
+  for (const name of names) {
+    if (!name) continue;
+    try {
+      const url = `https://api.deezer.com/search/artist?q=${encodeURIComponent(name)}&limit=1`;
+      const res = await fetch(url, { next: { revalidate: 86400 } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const artist = data.data?.[0];
+      if (!artist) continue;
+      // picture_xl = 1000x1000 고해상도 아티스트 사진
+      const photo = (artist.picture_xl || artist.picture_big || artist.picture_medium) as string | undefined;
+      if (photo) return photo;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/** 아티스트 이미지: Deezer 아티스트 사진 → 고해상도 앨범 아트 순으로 시도 */
+export async function fetchArtistImage(
+  itunesId: number,
+  nameJa?: string,
+  nameEn?: string
+): Promise<string | null> {
+  // Deezer에서 아티스트 대표 사진 시도 (공식 활동명 → 일본어 → 영어)
+  const deezerPhoto = await fetchDeezerArtistPhoto(nameEn, nameJa);
+  if (deezerPhoto) return deezerPhoto;
+
+  // 폴백: 고해상도 앨범 아트워크
   const tracks = await fetchArtistTracks(itunesId, 1);
   if (tracks.length === 0) return null;
   return getHighResArtwork(tracks[0].artworkUrl100, 600);
@@ -69,7 +101,7 @@ export async function fetchArtistInfo(
   itunesId: number
 ): Promise<ITunesArtistInfo | null> {
   const res = await fetch(
-    `${ITUNES_API}/lookup?id=${itunesId}&country=jp`,
+    `${ITUNES_API}/lookup?id=${itunesId}&country=jp&lang=ja_jp`,
     { next: { revalidate: 86400 } }
   );
   if (!res.ok) return null;
@@ -93,10 +125,12 @@ export interface SearchArtistResult {
 export async function searchArtists(
   query: string
 ): Promise<SearchArtistResult[]> {
+  // 일본 iTunes 스토어에서 일본어 이름으로 검색
   const params = new URLSearchParams({
     term: query,
     entity: "song",
     country: "jp",
+    lang: "ja_jp",
     limit: "50",
   });
 

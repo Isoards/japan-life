@@ -1,9 +1,3 @@
-export interface Track {
-  title: string;
-  titleJa?: string;
-  spotifyId: string;
-}
-
 export interface Artist {
   slug: string;
   name: string;
@@ -12,7 +6,6 @@ export interface Artist {
   image: string;
   description: string;
   itunesId: number;
-  tracks: Track[];
 }
 
 export interface Concert {
@@ -40,7 +33,7 @@ export interface ITunesTrack {
   primaryGenreName: string;
 }
 
-export interface EnrichedArtist extends Omit<Artist, "tracks"> {
+export interface EnrichedArtist extends Artist {
   imageUrl: string | null;
   itunesTracks: ITunesTrack[];
 }

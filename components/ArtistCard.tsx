@@ -8,7 +8,9 @@ interface ArtistCardProps {
 }
 
 export default function ArtistCard({ artist, imageUrl }: ArtistCardProps) {
-  const ticketSearchUrl = `https://eplus.jp/sf/search?block=true&keyword=${encodeURIComponent(artist.name)}`;
+  // 공식 활동명(name)을 1순위로 사용
+  const displayName = artist.name;
+  const ticketSearchUrl = `https://eplus.jp/sf/search?block=true&keyword=${encodeURIComponent(displayName)}`;
 
   return (
     <Link href={`/artists/${artist.slug}`}>
@@ -17,23 +19,25 @@ export default function ArtistCard({ artist, imageUrl }: ArtistCardProps) {
           {imageUrl ? (
             <Image
               src={imageUrl}
-              alt={artist.name}
+              alt={displayName}
               fill
               className="object-cover"
               sizes="96px"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-3xl">
-              {artist.name.charAt(0)}
+              {displayName.charAt(0)}
             </div>
           )}
         </div>
         <h3 className="text-lg font-bold text-white text-center group-hover:text-pink-400 transition-colors">
-          {artist.name}
+          {displayName}
         </h3>
-        <p className="text-sm text-gray-400 text-center mt-1">
-          {artist.nameJa}
-        </p>
+        {artist.nameJa && artist.name !== artist.nameJa && (
+          <p className="text-sm text-gray-400 text-center mt-1">
+            {artist.nameJa}
+          </p>
+        )}
         <div className="flex flex-wrap justify-center gap-1 mt-3">
           {artist.genre.map((g) => (
             <span

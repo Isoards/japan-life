@@ -6,8 +6,7 @@
     "genre": ["J-Pop", "Electronic"],
     "image": "/images/yoasobi.jpg",
     "itunesId": 1490256993,
-    "description": "YOASOBI is a Japanese music duo consisting of Vocaloid producer Ayase and singer-songwriter ikura. Known for creating music based on novels and short stories, they debuted in 2019 with \"Yoru ni Kakeru\" which became a massive viral hit. Their unique blend of electronic pop and storytelling has made them one of Japan's most popular acts worldwide.",
-    "tracks": []
+    "description": "보컬로이드 프로듀서 Ayase와 싱어송라이터 ikura로 구성된 일본 음악 듀오. 소설을 기반으로 음악을 만드는 것으로 유명하며, 2019년 데뷔곡 '夜に駆ける(밤을 달리며)'가 대히트를 기록했습니다. 일렉트로닉 팝과 스토리텔링의 독특한 조합으로 일본에서 가장 인기 있는 아티스트 중 하나입니다."
   },
   {
     "slug": "ado",
@@ -16,17 +15,15 @@
     "genre": ["J-Pop", "Rock", "Vocaloid"],
     "image": "/images/ado.jpg",
     "itunesId": 1492604670,
-    "description": "Ado is a Japanese singer known for her powerful and versatile vocals. She rose to fame with her debut single \"Usseewa\" in 2020 and further gained international recognition as the singing voice of Uta in the anime film \"ONE PIECE FILM RED.\" Her dynamic vocal range spans from delicate whispers to intense screaming vocals.",
-    "tracks": []
+    "description": "강렬하고 다재다능한 보컬로 유명한 일본 가수. 2020년 데뷔 싱글 'うっせぇわ(시끄러워)'로 주목받았으며, 애니메이션 영화 'ONE PIECE FILM RED'에서 우타의 노래를 담당하며 세계적 인지도를 얻었습니다. 섬세한 위스퍼링부터 강렬한 스크리밍까지 폭넓은 보컬이 특징입니다."
   },
   {
     "slug": "kenshi-yonezu",
-    "name": "Kenshi Yonezu",
-    "nameJa": "米津玄師",
+    "name": "米津玄師",
+    "nameJa": "よねづけんし",
     "genre": ["J-Pop", "Alternative", "Rock"],
     "image": "/images/kenshi-yonezu.jpg",
     "itunesId": 530814268,
-    "description": "Kenshi Yonezu is a Japanese singer-songwriter, record producer, and illustrator. Originally active as a Vocaloid producer under the name Hachi, he transitioned to performing his own vocals. His 2018 single \"Lemon\" became one of the best-selling digital singles in Japanese history. Known for his artistic vision, he also creates his own music videos and artwork.",
-    "tracks": []
+    "description": "일본의 싱어송라이터, 음악 프로듀서, 일러스트레이터. 원래 'Hachi'라는 이름으로 보컬로이드 프로듀서로 활동하다 직접 보컬을 맡기 시작했습니다. 2018년 싱글 'Lemon'은 일본 디지털 싱글 역대 최다 판매 기록 중 하나이며, 뮤직비디오와 아트워크도 직접 제작하는 것으로 유명합니다."
   }
 ]

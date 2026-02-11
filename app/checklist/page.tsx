@@ -9,6 +9,8 @@ import {
   PRIORITY_COLORS,
 } from "@/lib/checklist";
 import { useChecklist, mutateAPI } from "@/lib/hooks/use-api";
+import { useToast } from "@/components/Toast";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 const ALL_CATEGORIES: ChecklistCategory[] = [
   "pre-departure",
@@ -19,10 +21,12 @@ const ALL_CATEGORIES: ChecklistCategory[] = [
 ];
 
 export default function ChecklistPage() {
-  const { data: items = [], isLoading: loading, mutate } = useChecklist();
+  const { data: items = [], isLoading: loading, error, mutate } = useChecklist();
+  const { toast } = useToast();
   const [filter, setFilter] = useState<ChecklistCategory | "all">("all");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // form fields (shared for add/edit)
   const [formTitle, setFormTitle] = useState("");
@@ -40,18 +44,20 @@ export default function ChecklistPage() {
   };
 
   const handleToggle = async (id: string, checked: boolean) => {
-    await mutateAPI("/api/checklist", "PATCH", { id, checked: !checked });
+    const res = await mutateAPI("/api/checklist", "PATCH", { id, checked: !checked });
+    if (!res.ok) toast(res.error, "error");
     mutate();
   };
 
   const handleAdd = async () => {
     if (!formTitle.trim()) return;
-    await mutateAPI("/api/checklist", "POST", {
+    const res = await mutateAPI("/api/checklist", "POST", {
       title: formTitle.trim(),
       description: formDesc.trim() || undefined,
       category: formCategory,
       priority: formPriority,
     });
+    if (res.ok) { toast("항목을 추가했습니다"); } else { toast(res.error, "error"); }
     mutate();
     resetForm();
   };
@@ -67,20 +73,24 @@ export default function ChecklistPage() {
 
   const handleEdit = async () => {
     if (!editingId || !formTitle.trim()) return;
-    await mutateAPI("/api/checklist", "PATCH", {
+    const res = await mutateAPI("/api/checklist", "PATCH", {
       id: editingId,
       title: formTitle.trim(),
       description: formDesc.trim() || undefined,
       category: formCategory,
       priority: formPriority,
     });
+    if (res.ok) { toast("항목을 수정했습니다"); } else { toast(res.error, "error"); }
     mutate();
     resetForm();
   };
 
-  const handleDelete = async (id: string) => {
-    await mutateAPI("/api/checklist", "DELETE", { id });
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const res = await mutateAPI("/api/checklist", "DELETE", { id: deleteTarget });
+    if (res.ok) { toast("항목을 삭제했습니다"); } else { toast(res.error, "error"); }
     mutate();
+    setDeleteTarget(null);
   };
 
   const filtered =
@@ -98,8 +108,24 @@ export default function ChecklistPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="text-red-400">데이터를 불러오지 못했습니다</div>
+        <button onClick={() => mutate()} className="px-4 py-2 rounded-lg text-sm bg-white/10 text-white hover:bg-white/15 transition-colors">다시 시도</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="항목 삭제"
+        message="이 항목을 삭제하시겠습니까?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
@@ -306,7 +332,7 @@ export default function ChecklistPage() {
                       </svg>
                     </button>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => setDeleteTarget(item.id)}
                       className="text-gray-500 hover:text-red-400 transition-colors p-1"
                       title="삭제"
                     >

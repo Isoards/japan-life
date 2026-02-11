@@ -5,7 +5,7 @@ import { Artist, Concert } from "@/lib/types";
 import {
   fetchArtistTracks,
   fetchArtistInfo,
-  getHighResArtwork,
+  fetchArtistImage,
 } from "@/lib/itunes";
 import LatestRelease from "@/components/LatestRelease";
 import TrackList from "@/components/TrackList";
@@ -40,18 +40,21 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
 
   // For non-JSON artists, fetch from iTunes
   let artistName: string;
-  let artistNameJa: string | null = null;
+  let artistNameSub: string | null = null;
   let genres: string[];
   let description: string | null = null;
   let itunesId: number;
 
   if (artist) {
+    // JSON 아티스트: name = 공식 활동명 (1순위)
     artistName = artist.name;
-    artistNameJa = artist.nameJa;
+    // nameJa는 name과 다를 때만 서브로 표시
+    artistNameSub = (artist.nameJa && artist.nameJa !== artist.name) ? artist.nameJa : null;
     genres = artist.genre;
     description = artist.description;
     itunesId = artist.itunesId;
   } else if (!isNaN(itunesIdNum)) {
+    // iTunes 아티스트: lang=ja_jp → 공식 활동명 반환
     const info = await fetchArtistInfo(itunesIdNum);
     if (!info) notFound();
     artistName = info.artistName;
@@ -79,9 +82,12 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
   const latestTrack = itunesTracks.length > 0 ? itunesTracks[0] : null;
   const restTracks = itunesTracks.slice(1, 15);
 
-  const artistImageUrl = latestTrack
-    ? getHighResArtwork(latestTrack.artworkUrl100, 400)
-    : null;
+  // Deezer에서 아티스트 대표 사진 시도, 실패 시 앨범 아트
+  const artistImageUrl = await fetchArtistImage(
+    itunesId,
+    artist?.nameJa,
+    artistName
+  );
 
   const artistConcerts = artist
     ? concerts
@@ -95,9 +101,12 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
     <div className="space-y-8">
       <Link
         href="/artists"
-        className="text-sm text-gray-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
       >
-        ← 뒤로
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        아티스트 목록
       </Link>
 
       {/* Artist Header */}
@@ -121,8 +130,8 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white">{artistName}</h1>
-              {artistNameJa && (
-                <p className="text-lg text-gray-400">{artistNameJa}</p>
+              {artistNameSub && (
+                <p className="text-lg text-gray-400">{artistNameSub}</p>
               )}
             </div>
             <FavoriteButton

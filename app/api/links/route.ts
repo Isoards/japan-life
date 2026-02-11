@@ -48,6 +48,20 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(links);
 }
 
+export async function PATCH(request: NextRequest) {
+  const { id, ...updates } = await request.json();
+  if (!id) return NextResponse.json({ error: "id가 필요합니다" }, { status: 400 });
+  const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);
+  const link = links.find((l) => l.id === id);
+  if (!link) return NextResponse.json({ error: "항목을 찾을 수 없습니다" }, { status: 404 });
+  if (updates.title !== undefined) link.title = updates.title;
+  if (updates.url !== undefined) link.url = updates.url;
+  if (updates.category !== undefined) link.category = updates.category;
+  if (updates.icon !== undefined) link.icon = updates.icon;
+  await safeSave(links);
+  return NextResponse.json(links);
+}
+
 export async function DELETE(request: NextRequest) {
   const { id } = await request.json();
   const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);

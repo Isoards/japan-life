@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const navLinks = [
   { href: "/", label: "대시보드" },
+  { href: "/artists", label: "아티스트" },
   { href: "/concerts", label: "내 콘서트" },
   { href: "/checklist", label: "체크리스트" },
   { href: "/calculator", label: "계산기" },

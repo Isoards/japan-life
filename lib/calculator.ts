@@ -117,14 +117,14 @@ export function getDefaultBudget(): BudgetCategory[] {
   return getBudgetByPeriod("apr-jul");
 }
 
-/** 환율 수동 변환 */
+/** 환율 변환 (rate = 100엔 당 원화, 예: 920) */
 export function convertCurrency(
   amount: number,
-  rate: number,
+  ratePer100Yen: number,
   direction: "krw-to-jpy" | "jpy-to-krw"
 ): number {
   if (direction === "krw-to-jpy") {
-    return Math.round(amount / rate);
+    return Math.round(amount * 100 / ratePer100Yen);
   }
-  return Math.round(amount * rate);
+  return Math.round(amount * ratePer100Yen / 100);
 }

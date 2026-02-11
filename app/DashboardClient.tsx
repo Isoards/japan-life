@@ -46,20 +46,30 @@ export default function DashboardClient() {
   }, [searchQuery]);
 
   // Derived stats
-  const checkedCount = checklist.filter((c) => c.checked).length;
-  const totalChecklist = checklist.length;
-  const checklistPct = totalChecklist > 0 ? Math.round((checkedCount / totalChecklist) * 100) : 0;
-  const highPriorityLeft = checklist.filter((c) => c.priority === "high" && !c.checked).length;
+  const { checkedCount, totalChecklist, checklistPct, highPriorityLeft } = useMemo(() => {
+    const checked = checklist.filter((c) => c.checked).length;
+    const total = checklist.length;
+    return {
+      checkedCount: checked,
+      totalChecklist: total,
+      checklistPct: total > 0 ? Math.round((checked / total) * 100) : 0,
+      highPriorityLeft: checklist.filter((c) => c.priority === "high" && !c.checked).length,
+    };
+  }, [checklist]);
 
-  const today = new Date().toISOString().split("T")[0];
-  const upcomingConcerts = concerts
-    .filter((c) => c.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const nextConcert = upcomingConcerts[0] || null;
+  const { upcomingConcerts, nextConcert } = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const upcoming = concerts
+      .filter((c) => c.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return { upcomingConcerts: upcoming, nextConcert: upcoming[0] || null };
+  }, [concerts]);
 
-  const budgetTotal = budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
-  const budgetIncome = budget?.income ?? 0;
-  const budgetRemaining = budgetIncome - budgetTotal;
+  const { budgetTotal, budgetIncome, budgetRemaining } = useMemo(() => {
+    const total = budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
+    const income = budget?.income ?? 0;
+    return { budgetTotal: total, budgetIncome: income, budgetRemaining: income - total };
+  }, [budget]);
 
   return (
     <div className="space-y-10">
