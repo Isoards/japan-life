@@ -104,11 +104,22 @@ export interface GuideSection {
 export interface GuideItem {
   title: string;
   content: string;
+  linkedChecklist?: string[];
 }
 
 // ── 활동 지도 ──
 
-export type SpotCategory = "food" | "sightseeing" | "shopping" | "daily" | "work" | "other";
+export type SpotCategory =
+  | "food"
+  | "sightseeing"
+  | "shopping"
+  | "daily"
+  | "work"
+  | "government"
+  | "medical"
+  | "finance"
+  | "transport"
+  | "other";
 
 export interface MapSpot {
   id: string;
@@ -141,6 +152,18 @@ export interface QuickLink {
   url: string;
   category: string;
   icon?: string;
+}
+
+// ── 주간 회고 로그 ──
+
+export interface WeeklyLog {
+  id: string;
+  week: string;
+  technical: string;
+  expression: string;
+  mistake: string;
+  memo?: string;
+  createdAt: string;
 }
 
 // ── 노래방 검색 ──

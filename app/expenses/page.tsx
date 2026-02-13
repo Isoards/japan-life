@@ -70,7 +70,16 @@ function BudgetTab() {
 
   useEffect(() => {
     if (!budgetData || initialized) return;
-    if (budgetData.categories.length > 0) setCategories(budgetData.categories);
+    if (budgetData.categories.length > 0) {
+      // 저장된 데이터에 sheetCategories가 없을 수 있으므로 프리셋에서 병합
+      const preset = getBudgetByPeriod(budgetData.period || "apr-jul");
+      const merged = budgetData.categories.map((cat: BudgetCategory) => {
+        if (cat.sheetCategories) return cat;
+        const match = preset.find((p) => p.id === cat.id);
+        return { ...cat, sheetCategories: match?.sheetCategories ?? [] };
+      });
+      setCategories(merged);
+    }
     if (budgetData.income > 0) setIncome(String(budgetData.income));
     if (budgetData.period) setPeriod(budgetData.period);
     setInitialized(true);
@@ -109,7 +118,7 @@ function BudgetTab() {
   };
 
   const getActual = (cat: BudgetCategory): number => {
-    if (!sheetData) return 0;
+    if (!sheetData || !cat.sheetCategories) return 0;
     return cat.sheetCategories.reduce(
       (sum, sc) => sum + (sheetData.byCategory[sc] || 0),
       0,
@@ -303,7 +312,7 @@ function BudgetTab() {
                 <span className="text-sm text-gray-300 truncate block">
                   {cat.label}
                 </span>
-                {cat.sheetCategories.length > 0 && (
+                {cat.sheetCategories?.length > 0 && (
                   <span className="text-[10px] text-gray-600 truncate block">
                     {cat.sheetCategories.join(", ")}
                   </span>

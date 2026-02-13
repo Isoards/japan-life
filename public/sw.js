@@ -1,5 +1,5 @@
 const CACHE_NAME = "japan-life-v1";
-const PRECACHE_URLS = ["/", "/offline", "/manifest.json", "/icon-192x192.svg", "/icon-512x512.svg"];
+const PRECACHE_URLS = ["/", "/offline", "/manifest.json", "/jp_icon.png", "/jp_logo.png"];
 
 // Install: precache static assets
 self.addEventListener("install", (event) => {

@@ -10,6 +10,18 @@ type Tab = "salary" | "exchange";
 export default function CalculatorPage() {
   const [tab, setTab] = useState<Tab>("salary");
 
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      if (window.location.hash === "#exchange-calculator") {
+        setTab("exchange");
+      }
+    };
+
+    syncTabFromHash();
+    window.addEventListener("hashchange", syncTabFromHash);
+    return () => window.removeEventListener("hashchange", syncTabFromHash);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -44,7 +56,11 @@ export default function CalculatorPage() {
       </div>
 
       {tab === "salary" && <SalaryTab />}
-      {tab === "exchange" && <ExchangeTab />}
+      {tab === "exchange" && (
+        <div id="exchange-calculator">
+          <ExchangeTab />
+        </div>
+      )}
     </div>
   );
 }

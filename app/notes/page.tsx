@@ -6,7 +6,7 @@ import { useNotes, useLinks, mutateAPI } from "@/lib/hooks/use-api";
 import { useToast } from "@/components/Toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
-type Tab = "notes" | "links";
+type Tab = "notes" | "templates" | "quiz" | "links";
 
 const NOTE_CATEGORIES: { key: NoteCategory; label: string; icon: string }[] = [
   { key: "business", label: "비즈니스", icon: "💼" },
@@ -28,25 +28,27 @@ export default function NotesPage() {
       </div>
 
       <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-        <button
-          onClick={() => setTab("notes")}
-          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "notes" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
-          }`}
-        >
-          📓 일본어 메모
-        </button>
-        <button
-          onClick={() => setTab("links")}
-          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "links" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
-          }`}
-        >
-          🔗 링크 모음
-        </button>
+        {([
+          { key: "notes", label: "📓 메모" },
+          { key: "templates", label: "📧 템플릿" },
+          { key: "quiz", label: "🧠 퀴즈" },
+          { key: "links", label: "🔗 링크" },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              tab === t.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === "notes" && <NotesTab />}
+      {tab === "templates" && <TemplatesTab />}
+      {tab === "quiz" && <QuizTab />}
       {tab === "links" && <LinksTab />}
     </div>
   );
@@ -227,6 +229,546 @@ function NotesTab() {
             <p className="text-gray-500">{search ? "검색 결과가 없습니다" : "메모를 추가해보세요"}</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ──── SRS 퀴즈 ──── */
+
+interface SrsState {
+  [noteId: string]: {
+    interval: number; // days until next review
+    easeFactor: number; // SM-2 ease factor
+    nextReview: string; // ISO date
+    repetitions: number;
+  };
+}
+
+const SRS_KEY = "japan-life-srs";
+
+function loadSrs(): SrsState {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SRS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveSrs(state: SrsState) {
+  localStorage.setItem(SRS_KEY, JSON.stringify(state));
+}
+
+function getDueNotes(notes: Note[], srs: SrsState): Note[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return notes.filter((n) => {
+    const s = srs[n.id];
+    if (!s) return true; // never reviewed = due
+    return s.nextReview <= today;
+  });
+}
+
+function updateSrs(srs: SrsState, noteId: string, quality: number): SrsState {
+  const prev = srs[noteId] || { interval: 0, easeFactor: 2.5, nextReview: "", repetitions: 0 };
+  let { interval, easeFactor, repetitions } = prev;
+
+  if (quality < 3) {
+    // forgot — reset
+    repetitions = 0;
+    interval = 1;
+  } else {
+    repetitions += 1;
+    if (repetitions === 1) interval = 1;
+    else if (repetitions === 2) interval = 3;
+    else interval = Math.round(interval * easeFactor);
+
+    easeFactor = Math.max(1.3, easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  }
+
+  const next = new Date();
+  next.setDate(next.getDate() + interval);
+
+  return {
+    ...srs,
+    [noteId]: {
+      interval,
+      easeFactor,
+      nextReview: next.toISOString().slice(0, 10),
+      repetitions,
+    },
+  };
+}
+
+function QuizTab() {
+  const { data: notes = [], isLoading } = useNotes();
+  const [srs, setSrs] = useState<SrsState>(loadSrs);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [filterCat, setFilterCat] = useState<NoteCategory | "all">("all");
+  const [sessionStats, setSessionStats] = useState({ total: 0, correct: 0 });
+
+  const filtered = filterCat === "all" ? notes : notes.filter((n) => n.category === filterCat);
+  const dueNotes = getDueNotes(filtered, srs);
+  const current = dueNotes[currentIndex];
+
+  const handleAnswer = (quality: number) => {
+    if (!current) return;
+    const newSrs = updateSrs(srs, current.id, quality);
+    setSrs(newSrs);
+    saveSrs(newSrs);
+
+    setSessionStats((prev) => ({
+      total: prev.total + 1,
+      correct: quality >= 3 ? prev.correct + 1 : prev.correct,
+    }));
+
+    setShowAnswer(false);
+    // Move to next, but since dueNotes will recompute, keep index or reset
+    if (currentIndex >= dueNotes.length - 1) {
+      setCurrentIndex(0);
+    }
+  };
+
+  const resetAll = () => {
+    setSrs({});
+    saveSrs({});
+    setCurrentIndex(0);
+    setSessionStats({ total: 0, correct: 0 });
+  };
+
+  if (isLoading) return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;
+
+  if (notes.length === 0) {
+    return (
+      <div className="text-center py-10 rounded-xl border border-dashed border-white/10">
+        <p className="text-gray-400 mb-2">퀴즈를 시작하려면 먼저 메모를 추가하세요</p>
+        <p className="text-gray-600 text-sm">일본어 메모 탭에서 단어/표현을 추가하면 여기서 퀴즈를 풀 수 있습니다</p>
+      </div>
+    );
+  }
+
+  // Recompute due notes after state change
+  const activeDue = getDueNotes(filtered, srs);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-500">
+        메모에 저장한 일본어 표현을 SRS(간격 반복) 방식으로 복습합니다. 일본어를 보고 뜻을 떠올린 뒤 난이도를 평가하세요.
+      </p>
+
+      {/* Category filter */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => { setFilterCat("all"); setCurrentIndex(0); setShowAnswer(false); }}
+          className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filterCat === "all" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+        >
+          전체
+        </button>
+        {NOTE_CATEGORIES.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => { setFilterCat(cat.key); setCurrentIndex(0); setShowAnswer(false); }}
+            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filterCat === cat.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+          >
+            {cat.icon} {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Session stats */}
+      <div className="flex gap-3 text-xs text-gray-500">
+        <span>복습 대기: <span className="text-white font-medium">{activeDue.length}</span></span>
+        <span>오늘 학습: <span className="text-white font-medium">{sessionStats.total}</span></span>
+        {sessionStats.total > 0 && (
+          <span>정답률: <span className="text-emerald-400 font-medium">{Math.round((sessionStats.correct / sessionStats.total) * 100)}%</span></span>
+        )}
+      </div>
+
+      {/* Quiz card */}
+      {activeDue.length > 0 && currentIndex < activeDue.length ? (
+        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 text-center space-y-4">
+          <div className="text-xs text-gray-600">
+            {currentIndex + 1} / {activeDue.length}
+          </div>
+
+          {/* Question */}
+          <div className="text-2xl font-bold text-white py-4">
+            {activeDue[currentIndex].japanese}
+          </div>
+          {activeDue[currentIndex].reading && (
+            <div className="text-sm text-purple-400">
+              {activeDue[currentIndex].reading}
+            </div>
+          )}
+
+          {/* Answer */}
+          {showAnswer ? (
+            <div className="space-y-4">
+              <div className="text-lg text-emerald-400 font-medium py-2">
+                {activeDue[currentIndex].korean}
+              </div>
+              {activeDue[currentIndex].memo && (
+                <div className="text-xs text-gray-500">{activeDue[currentIndex].memo}</div>
+              )}
+              <div className="flex justify-center gap-2 pt-2">
+                <button
+                  onClick={() => handleAnswer(1)}
+                  className="px-4 py-2 rounded-lg text-sm bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
+                >
+                  모름
+                </button>
+                <button
+                  onClick={() => handleAnswer(3)}
+                  className="px-4 py-2 rounded-lg text-sm bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30 transition-colors"
+                >
+                  어려움
+                </button>
+                <button
+                  onClick={() => handleAnswer(4)}
+                  className="px-4 py-2 rounded-lg text-sm bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                >
+                  보통
+                </button>
+                <button
+                  onClick={() => handleAnswer(5)}
+                  className="px-4 py-2 rounded-lg text-sm bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                >
+                  쉬움
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAnswer(true)}
+              className="px-6 py-3 rounded-lg text-sm font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
+            >
+              정답 보기
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-10 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+          <p className="text-emerald-400 font-medium mb-2">오늘 복습 완료!</p>
+          <p className="text-gray-500 text-sm">
+            총 {filtered.length}개 중 {filtered.length - activeDue.length}개 학습 완료
+          </p>
+        </div>
+      )}
+
+      {/* Reset */}
+      <div className="flex justify-end">
+        <button
+          onClick={resetAll}
+          className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+        >
+          학습 기록 초기화
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ──── 업무 템플릿 ──── */
+
+interface EmailTemplate {
+  id: string;
+  category: string;
+  title: string;
+  titleKo: string;
+  subject: string;
+  body: string;
+}
+
+const EMAIL_TEMPLATES: EmailTemplate[] = [
+  {
+    id: "meeting-request",
+    category: "회의",
+    title: "打ち合わせ依頼",
+    titleKo: "미팅 요청",
+    subject: "【ご相談】○○の件でお打ち合わせのお願い",
+    body: `お疲れ様です。○○部の○○です。
+
+○○の件について、ご相談させていただきたく、
+お打ち合わせのお時間をいただけないでしょうか。
+
+【議題】
+・○○について
+
+【候補日時】
+・○月○日（○）○:00〜○:00
+・○月○日（○）○:00〜○:00
+
+ご都合の良い日時をお知らせいただけますと幸いです。
+お忙しいところ恐れ入りますが、よろしくお願いいたします。`,
+  },
+  {
+    id: "schedule-change",
+    category: "회의",
+    title: "日程変更のお願い",
+    titleKo: "일정 변경 요청",
+    subject: "【日程変更】○月○日の打ち合わせについて",
+    body: `お疲れ様です。○○です。
+
+○月○日に予定しておりました打ち合わせですが、
+急な予定が入り、日程の変更をお願いできないでしょうか。
+
+【変更希望日時】
+・○月○日（○）○:00〜○:00
+・○月○日（○）○:00〜○:00
+
+ご迷惑をおかけして申し訳ございません。
+ご検討のほど、よろしくお願いいたします。`,
+  },
+  {
+    id: "bug-report",
+    category: "기술",
+    title: "不具合報告",
+    titleKo: "결함 보고",
+    subject: "【不具合報告】○○における○○の不具合について",
+    body: `お疲れ様です。○○です。
+
+○○において不具合を確認しましたので、ご報告いたします。
+
+【対象】○○（型式：○○）
+【発生日時】○年○月○日 ○:○○
+【事象】
+・○○の操作を行った際に、○○が発生する
+
+【再現手順】
+1. ○○を起動する
+2. ○○の操作を行う
+3. ○○が発生する
+
+【再現率】○/○回（○%）
+【影響範囲】○○
+
+【添付資料】
+・ログファイル
+・スクリーンショット
+
+ご確認のほど、よろしくお願いいたします。`,
+  },
+  {
+    id: "test-result",
+    category: "기술",
+    title: "検証結果共有",
+    titleKo: "검증 결과 공유",
+    subject: "【検証結果】○○の評価結果について",
+    body: `お疲れ様です。○○です。
+
+○○の検証結果をご報告いたします。
+
+【検証対象】○○
+【検証期間】○月○日〜○月○日
+【検証環境】○○
+
+【結果サマリ】
+・テスト項目数：○件
+・合格：○件
+・不合格：○件
+・未実施：○件
+
+【主な指摘事項】
+1. ○○：○○（重要度：高/中/低）
+2. ○○：○○（重要度：高/中/低）
+
+【添付】
+・検証結果一覧（Excel）
+
+詳細についてはご質問ください。
+よろしくお願いいたします。`,
+  },
+  {
+    id: "spec-review",
+    category: "기술",
+    title: "仕様書レビュー依頼",
+    titleKo: "사양서 리뷰 요청",
+    subject: "【レビュー依頼】○○仕様書 v○.○",
+    body: `お疲れ様です。○○です。
+
+○○の仕様書を作成しましたので、
+レビューをお願いいたします。
+
+【文書名】○○仕様書 v○.○
+【格納先】○○
+【レビュー期限】○月○日（○）
+
+【主な変更点】
+・○○の要件を追加
+・○○の条件を修正
+
+お忙しいところ恐れ入りますが、
+ご確認のほどよろしくお願いいたします。`,
+  },
+  {
+    id: "progress-report",
+    category: "보고",
+    title: "進捗報告",
+    titleKo: "진척 보고",
+    subject: "【週報】○月○日〜○月○日 進捗報告",
+    body: `お疲れ様です。○○です。
+今週の進捗をご報告いたします。
+
+【今週の実績】
+・○○：○○を完了（進捗○%）
+・○○：○○まで対応済み
+
+【来週の予定】
+・○○：○○を実施予定
+・○○：○○を開始予定
+
+【課題・相談事項】
+・○○について、○○の判断が必要です
+
+以上、よろしくお願いいたします。`,
+  },
+  {
+    id: "absence",
+    category: "근태",
+    title: "休暇届",
+    titleKo: "휴가 신청",
+    subject: "【休暇届】○月○日 有給休暇取得のお願い",
+    body: `お疲れ様です。○○です。
+
+下記の通り、有給休暇を取得させていただきたく、
+ご承認をお願いいたします。
+
+【取得日】○月○日（○）
+【種類】有給休暇 / 半休（午前/午後）
+【理由】私用のため
+【業務引継ぎ】○○さんへ依頼済み
+
+ご迷惑をおかけしますが、
+よろしくお願いいたします。`,
+  },
+  {
+    id: "thank-you",
+    category: "인사",
+    title: "お礼メール",
+    titleKo: "감사 메일",
+    subject: "○○の件、ありがとうございました",
+    body: `お疲れ様です。○○です。
+
+先日は○○の件でお時間をいただき、
+ありがとうございました。
+
+○○について、大変参考になりました。
+いただいたアドバイスをもとに、○○を進めてまいります。
+
+今後ともご指導のほど、よろしくお願いいたします。`,
+  },
+];
+
+const TEMPLATE_CATEGORIES = [...new Set(EMAIL_TEMPLATES.map((t) => t.category))];
+
+function TemplatesTab() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [filterCat, setFilterCat] = useState<string | "all">("all");
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // fallback: do nothing
+    }
+  };
+
+  const filtered = filterCat === "all"
+    ? EMAIL_TEMPLATES
+    : EMAIL_TEMPLATES.filter((t) => t.category === filterCat);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-500">
+        Honda 업무에서 자주 쓰는 일본어 메일 템플릿입니다. 클릭하여 펼치고 복사할 수 있습니다.
+      </p>
+
+      {/* Category filter */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setFilterCat("all")}
+          className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filterCat === "all" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+        >
+          전체 ({EMAIL_TEMPLATES.length})
+        </button>
+        {TEMPLATE_CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setFilterCat(cat)}
+            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filterCat === cat ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+          >
+            {cat} ({EMAIL_TEMPLATES.filter((t) => t.category === cat).length})
+          </button>
+        ))}
+      </div>
+
+      {/* Template cards */}
+      <div className="space-y-2">
+        {filtered.map((tpl) => {
+          const isExpanded = expandedId === tpl.id;
+          const isCopied = copiedId === tpl.id;
+
+          return (
+            <div key={tpl.id} className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : tpl.id)}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors"
+              >
+                <span className="text-xs px-2 py-0.5 rounded bg-white/10 text-gray-400 shrink-0">{tpl.category}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white">{tpl.title}</div>
+                  <div className="text-xs text-gray-500">{tpl.titleKo}</div>
+                </div>
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-3 border-t border-white/5">
+                  {/* Subject */}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">件名 (제목)</span>
+                      <button
+                        onClick={() => copyToClipboard(tpl.subject, tpl.id + "-subj")}
+                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        {copiedId === tpl.id + "-subj" ? "copied!" : "복사"}
+                      </button>
+                    </div>
+                    <div className="px-3 py-2 rounded-lg bg-white/10 text-sm text-white font-mono">
+                      {tpl.subject}
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">本文 (본문)</span>
+                      <button
+                        onClick={() => copyToClipboard(tpl.body, tpl.id)}
+                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        {isCopied ? "copied!" : "복사"}
+                      </button>
+                    </div>
+                    <pre className="px-3 py-2 rounded-lg bg-white/10 text-sm text-gray-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">
+                      {tpl.body}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

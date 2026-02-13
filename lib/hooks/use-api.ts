@@ -9,6 +9,7 @@ import type {
   ITunesTrack,
   KaraokeSong,
   SheetsSummary,
+  WeeklyLog,
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
@@ -70,6 +71,13 @@ export function useLinks() {
   });
 }
 
+export function useLogs() {
+  return useSWR<WeeklyLog[]>("/api/logs", fetcher, {
+    fallbackData: [],
+    revalidateOnFocus: false,
+  });
+}
+
 export function useReleases(ids: string | null) {
   return useSWR<ITunesTrack[]>(
     ids ? `/api/releases?ids=${ids}&limit=10` : null,
@@ -102,6 +110,21 @@ export function useExchangeRate() {
   return useSWR<ExchangeRateData>("/api/exchange-rate", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 600_000, // 10분 중복 방지
+  });
+}
+
+export interface LiveExchangeRates {
+  krwJpy: number;
+  krwUsd: number;
+  jpyUsd: number;
+  cached?: boolean;
+  fallback?: boolean;
+}
+
+export function useLiveExchangeRates() {
+  return useSWR<LiveExchangeRates>("/api/exchange-rates", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 300_000,
   });
 }
 

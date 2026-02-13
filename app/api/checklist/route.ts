@@ -5,6 +5,23 @@ import defaults from "@/data/checklist-defaults.json";
 
 const STORE_NAME = "checklist";
 
+function normalizeChecklist(stored: unknown): ChecklistItem[] | null {
+  if (stored === null || stored === undefined) return null;
+  if (Array.isArray(stored)) return stored as ChecklistItem[];
+
+  if (typeof stored === "object") {
+    const values = Object.entries(stored as Record<string, unknown>)
+      .filter(([key]) => key !== "__version")
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([, value]) => value)
+      .filter((value): value is ChecklistItem => typeof value === "object" && value !== null);
+
+    if (values.length > 0) return values;
+  }
+
+  return null;
+}
+
 async function safeSave(items: ChecklistItem[]): Promise<void> {
   try {
     await writeStore(STORE_NAME, items);
@@ -14,13 +31,20 @@ async function safeSave(items: ChecklistItem[]): Promise<void> {
 }
 
 async function getChecklist(): Promise<ChecklistItem[]> {
-  const stored = await readStore<ChecklistItem[] | null>(STORE_NAME, null);
-  if (stored === null) {
+  const stored = await readStore<unknown>(STORE_NAME, null);
+  const normalized = normalizeChecklist(stored);
+
+  if (normalized === null) {
     const items = defaults as ChecklistItem[];
     await safeSave(items);
     return items;
   }
-  return stored;
+
+  if (!Array.isArray(stored)) {
+    await safeSave(normalized);
+  }
+
+  return normalized;
 }
 
 export async function GET() {

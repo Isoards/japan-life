@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
 import type { BudgetData } from "@/lib/types";
 import { getDefaultBudget } from "@/lib/calculator";
+import { budgetSchema, parseOrError } from "@/lib/validations";
 
 const STORE_NAME = "budget";
 
@@ -18,11 +19,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body: BudgetData = await request.json();
+  const body = await request.json();
+  const parsed = parseOrError(budgetSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   try {
-    await writeStore(STORE_NAME, body);
+    await writeStore(STORE_NAME, parsed.data);
   } catch {
     // Volume permission issue — skip persisting
   }
-  return NextResponse.json(body);
+  return NextResponse.json(parsed.data);
 }

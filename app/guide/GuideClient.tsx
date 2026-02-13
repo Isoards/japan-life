@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { GuideSection } from "@/lib/types";
+import type { GuideSection, ChecklistItem } from "@/lib/types";
+import { useChecklist, mutateAPI } from "@/lib/hooks/use-api";
 
 interface GuideClientProps {
   sections: GuideSection[];
@@ -9,8 +10,17 @@ interface GuideClientProps {
 
 export default function GuideClient({ sections }: GuideClientProps) {
   const [activeTab, setActiveTab] = useState(sections[0]?.id ?? "");
+  const { data: checklist = [], mutate } = useChecklist();
 
   const active = sections.find((s) => s.id === activeTab) ?? sections[0];
+
+  const toggleCheck = async (item: ChecklistItem) => {
+    await mutateAPI("/api/checklist", "PATCH", {
+      id: item.id,
+      checked: !item.checked,
+    });
+    mutate();
+  };
 
   return (
     <div className="space-y-6">
@@ -50,17 +60,57 @@ export default function GuideClient({ sections }: GuideClientProps) {
 
       {/* Content cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        {active.items.map((item, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-colors"
-          >
-            <h3 className="text-sm font-bold text-white mb-3">{item.title}</h3>
-            <div className="text-sm text-gray-400 whitespace-pre-line leading-relaxed">
-              {item.content}
+        {active.items.map((item, i) => {
+          const linked = item.linkedChecklist
+            ?.map((id) => checklist.find((c) => c.id === id))
+            .filter(Boolean) as ChecklistItem[] | undefined;
+
+          return (
+            <div
+              key={i}
+              className="rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/[0.07] transition-colors"
+            >
+              <h3 className="text-sm font-bold text-white mb-3">{item.title}</h3>
+              <div className="text-sm text-gray-400 whitespace-pre-line leading-relaxed">
+                {item.content}
+              </div>
+
+              {/* Linked checklist */}
+              {linked && linked.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5">
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    관련 체크리스트
+                  </span>
+                  {linked.map((cl) => (
+                    <label
+                      key={cl.id}
+                      className="flex items-center gap-2 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={cl.checked}
+                        onChange={() => toggleCheck(cl)}
+                        className="w-3.5 h-3.5 rounded border-white/20 bg-white/10 text-purple-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span
+                        className={`text-xs transition-colors ${
+                          cl.checked
+                            ? "text-gray-600 line-through"
+                            : "text-gray-300 group-hover:text-white"
+                        }`}
+                      >
+                        {cl.title}
+                      </span>
+                      {cl.priority === "high" && (
+                        <span className="text-[10px] px-1 rounded text-red-400 bg-red-500/10">!</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

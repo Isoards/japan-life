@@ -12,7 +12,9 @@
       "WebFetch(domain:www.kumyoung.com)",
       "WebFetch(domain:www.tjmedia.com)",
       "WebFetch(domain:api.manana.kr)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }

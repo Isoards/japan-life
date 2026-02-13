@@ -10,12 +10,14 @@ import {
   useFavorites,
   useChecklist,
   useConcerts,
-  useNotes,
-  useSpots,
   useBudget,
   useReleases,
   useSearch,
+  useLiveExchangeRates,
+  useSheetsSummary,
 } from "@/lib/hooks/use-api";
+
+const DASHBOARD_RENDER_TIME = Date.now();
 
 export default function DashboardClient() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,9 +26,17 @@ export default function DashboardClient() {
   const { data: favorites = [] } = useFavorites();
   const { data: checklist = [] } = useChecklist();
   const { data: concerts = [] } = useConcerts();
-  const { data: notes = [] } = useNotes();
-  const { data: spots = [] } = useSpots();
   const { data: budget } = useBudget();
+  const { data: liveRates, isLoading: ratesLoading } = useLiveExchangeRates();
+  const currentMonth = useMemo(
+    () => `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+    [],
+  );
+  const currentMonthLabel = useMemo(
+    () => new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" }),
+    [],
+  );
+  const { data: currentMonthSheet, isLoading: monthSheetLoading } = useSheetsSummary(currentMonth);
 
   const releaseIds = useMemo(
     () => (favorites.length > 0 ? favorites.map((f) => f.itunesId).join(",") : null),
@@ -35,17 +45,15 @@ export default function DashboardClient() {
   const { data: newReleases = [], isLoading: releasesLoading } = useReleases(releaseIds);
   const { data: searchResults = [], isLoading: searching } = useSearch(debouncedQuery);
 
-  // Debounce search query
   useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setDebouncedQuery("");
-      return;
-    }
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 400);
+    const nextQuery = searchQuery.trim();
+    const timer = setTimeout(
+      () => setDebouncedQuery(nextQuery.length >= 2 ? nextQuery : ""),
+      400,
+    );
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Derived stats
   const { checkedCount, totalChecklist, checklistPct, highPriorityLeft } = useMemo(() => {
     const checked = checklist.filter((c) => c.checked).length;
     const total = checklist.length;
@@ -65,27 +73,31 @@ export default function DashboardClient() {
     return { upcomingConcerts: upcoming, nextConcert: upcoming[0] || null };
   }, [concerts]);
 
-  const { budgetTotal, budgetIncome, budgetRemaining } = useMemo(() => {
-    const total = budget?.categories?.reduce((s, c) => s + c.amount, 0) ?? 0;
-    const income = budget?.income ?? 0;
-    return { budgetTotal: total, budgetIncome: income, budgetRemaining: income - total };
-  }, [budget]);
+  const { budgetTotal, budgetSpent, budgetRemaining } = useMemo(() => {
+    const total = budget?.categories?.reduce((sum, category) => sum + category.amount, 0) ?? 0;
+    const spent = currentMonthSheet
+      ? (budget?.categories ?? []).reduce((sum, category) => {
+          const sheetKeys = category.sheetCategories ?? [];
+          const categorySpent = sheetKeys.reduce(
+            (acc, key) => acc + (currentMonthSheet.byCategory?.[key] ?? 0),
+            0,
+          );
+          return sum + categorySpent;
+        }, 0)
+      : 0;
+    return { budgetTotal: total, budgetSpent: spent, budgetRemaining: total - spent };
+  }, [budget, currentMonthSheet]);
 
   return (
     <div className="space-y-10">
-      {/* Hero + Search */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
           Japan Life
         </h1>
-        <p className="text-gray-400 max-w-xl mx-auto">
-          일본 생활 대시보드
-        </p>
+        <p className="text-gray-400 max-w-xl mx-auto">일본 생활 대시보드</p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Checklist */}
         <Link href="/checklist">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-emerald-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
@@ -108,32 +120,30 @@ export default function DashboardClient() {
           </div>
         </Link>
 
-        {/* Budget */}
-        <Link href="/calculator">
+        <Link href="/expenses">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-blue-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">💰</span>
               <span className="text-sm font-medium text-gray-400">예산</span>
             </div>
-            {budgetIncome > 0 ? (
+            {budgetTotal > 0 ? (
               <>
-                <div className="text-2xl font-bold text-white mb-1">
-                  ¥{budgetRemaining.toLocaleString()}
-                </div>
+                <div className="text-2xl font-bold text-white mb-1">¥{budgetRemaining.toLocaleString()}</div>
                 <p className="text-xs text-gray-500">
-                  ¥{budgetIncome.toLocaleString()} 중 ¥{budgetTotal.toLocaleString()} 지출
+                  {monthSheetLoading
+                    ? `${currentMonthLabel} 지출 불러오는 중...`
+                    : `${currentMonthLabel} 지출 ¥${budgetSpent.toLocaleString()} / 예산 ¥${budgetTotal.toLocaleString()}`}
                 </p>
               </>
             ) : (
               <>
                 <div className="text-2xl font-bold text-gray-600 mb-1">--</div>
-                <p className="text-xs text-gray-500">예산을 설정하세요</p>
+                <p className="text-xs text-gray-500">예산을 설정해 주세요</p>
               </>
             )}
           </div>
         </Link>
 
-        {/* Concerts */}
         <Link href="/concerts">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-purple-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
@@ -144,43 +154,55 @@ export default function DashboardClient() {
               <>
                 <div className="text-sm font-bold text-white mb-1 truncate">{nextConcert.title}</div>
                 <p className="text-xs text-gray-500 truncate">{nextConcert.date} · {nextConcert.venue}</p>
-                <p className="text-xs text-purple-400 mt-1">
-                  {upcomingConcerts.length}개 예정
-                </p>
+                <p className="text-xs text-purple-400 mt-1">{upcomingConcerts.length}개 예정</p>
               </>
             ) : (
               <>
                 <div className="text-2xl font-bold text-gray-600 mb-1">{concerts.length}</div>
                 <p className="text-xs text-gray-500">
-                  {concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가하세요"}
+                  {concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가해 주세요"}
                 </p>
               </>
             )}
           </div>
         </Link>
 
-        {/* Notes & Spots */}
-        <Link href="/notes">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-amber-500/30 transition-all h-full">
+        <Link href="/calculator#exchange-calculator">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 h-full hover:bg-white/10 hover:border-amber-500/30 transition-all">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">📝</span>
-              <span className="text-sm font-medium text-gray-400">메모 / 장소</span>
+              <span className="text-lg">FX</span>
+              <span className="text-sm font-medium text-gray-400">환율</span>
             </div>
-            <div className="flex gap-4">
-              <div>
-                <div className="text-2xl font-bold text-white">{notes.length}</div>
-                <p className="text-xs text-gray-500">메모</p>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">🇰🇷🇯🇵 KRW-JPY</span>
+                <span className="font-mono text-white">
+                  {ratesLoading || !liveRates
+                    ? "--"
+                    : liveRates.krwJpy.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </span>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-white">{spots.length}</div>
-                <p className="text-xs text-gray-500">장소</p>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">🇰🇷🇺🇸 KRW-USD</span>
+                <span className="font-mono text-white">
+                  {ratesLoading || !liveRates
+                    ? "--"
+                    : liveRates.krwUsd.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">🇯🇵🇺🇸 JPY-USD</span>
+                <span className="font-mono text-white">
+                  {ratesLoading || !liveRates
+                    ? "--"
+                    : liveRates.jpyUsd.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}
+                </span>
               </div>
             </div>
           </div>
         </Link>
       </div>
 
-      {/* Inline Search */}
       <div className="max-w-2xl mx-auto">
         <div className="relative">
           <svg
@@ -213,7 +235,6 @@ export default function DashboardClient() {
           )}
         </div>
 
-        {/* Search Results Dropdown */}
         {(searching || searchResults.length > 0) && searchQuery.length >= 2 && (
           <div className="mt-2 rounded-xl bg-gray-900/95 border border-white/10 overflow-hidden shadow-2xl">
             {searching && (
@@ -249,12 +270,8 @@ export default function DashboardClient() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
-                          {artist.name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {artist.genres.join(", ")}
-                        </p>
+                        <p className="text-sm font-medium text-white truncate">{artist.name}</p>
+                        <p className="text-xs text-gray-400">{artist.genres.join(", ")}</p>
                       </div>
                     </Link>
                     <FavoriteButton
@@ -270,20 +287,15 @@ export default function DashboardClient() {
               </div>
             )}
             {!searching && searchResults.length === 0 && searchQuery.length >= 2 && (
-              <p className="p-4 text-sm text-gray-500 text-center">
-                아티스트를 찾을 수 없습니다
-              </p>
+              <p className="p-4 text-sm text-gray-500 text-center">아티스트를 찾을 수 없습니다</p>
             )}
           </div>
         )}
       </div>
 
-      {/* Favorites */}
       {favorites.length > 0 && (
         <section>
-          <h2 className="text-2xl font-bold text-white mb-4">
-            ♥ 즐겨찾기
-          </h2>
+          <h2 className="text-2xl font-bold text-white mb-4">♥ 즐겨찾기</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {favorites.map((fav) => (
               <Link key={fav.itunesId} href={`/artists/${fav.itunesId}`}>
@@ -313,12 +325,9 @@ export default function DashboardClient() {
         </section>
       )}
 
-      {/* New Releases from Favorites */}
       {favorites.length > 0 && (
         <section>
-          <h2 className="text-2xl font-bold text-white mb-4">
-            최신 발매
-          </h2>
+          <h2 className="text-2xl font-bold text-white mb-4">최신 발매</h2>
           {releasesLoading && (
             <div className="text-center py-8">
               <div className="inline-block w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
@@ -327,13 +336,10 @@ export default function DashboardClient() {
           {!releasesLoading && newReleases.length > 0 && (
             <div className="space-y-2">
               {newReleases.map((track, i) => {
-                const artworkUrl = getHighResArtwork(
-                  track.artworkUrl100,
-                  120
-                );
+                const artworkUrl = getHighResArtwork(track.artworkUrl100, 120);
                 const releaseDate = new Date(track.releaseDate);
                 const isRecent =
-                  Date.now() - releaseDate.getTime() < 30 * 24 * 60 * 60 * 1000;
+                  DASHBOARD_RENDER_TIME - releaseDate.getTime() < 30 * 24 * 60 * 60 * 1000;
                 return (
                   <div
                     key={`${track.trackId}-${i}`}
@@ -350,9 +356,7 @@ export default function DashboardClient() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-white truncate">
-                          {track.trackName}
-                        </p>
+                        <p className="font-medium text-white truncate">{track.trackName}</p>
                         {isRecent && (
                           <span className="px-1.5 py-0.5 text-[10px] rounded bg-pink-500/20 text-pink-300 shrink-0">
                             NEW
@@ -371,7 +375,7 @@ export default function DashboardClient() {
                       </p>
                     </div>
                     <span className="text-xs text-gray-500 hidden sm:block shrink-0">
-                      {releaseDate.toLocaleDateString("ko", {
+                      {releaseDate.toLocaleDateString("ko-KR", {
                         month: "short",
                         day: "numeric",
                       })}
@@ -380,10 +384,7 @@ export default function DashboardClient() {
                       {formatDuration(track.trackTimeMillis)}
                     </span>
                     <div className="shrink-0">
-                      <MusicButton
-                        trackName={track.trackName}
-                        artistName={track.artistName}
-                      />
+                      <MusicButton trackName={track.trackName} artistName={track.artistName} />
                     </div>
                   </div>
                 );
@@ -391,22 +392,15 @@ export default function DashboardClient() {
             </div>
           )}
           {!releasesLoading && newReleases.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
-              발매 정보가 없습니다.
-            </p>
+            <p className="text-gray-500 text-center py-4">발매 정보가 없습니다.</p>
           )}
         </section>
       )}
 
-      {/* Empty State */}
       {favorites.length === 0 && (
         <section className="text-center py-10 rounded-xl border border-dashed border-white/10">
-          <p className="text-gray-300 text-lg mb-2">
-            위에서 아티스트를 검색하고 즐겨찾기에 추가하세요
-          </p>
-          <p className="text-gray-500 text-sm">
-            최신 발매 정보가 여기에 표시됩니다
-          </p>
+          <p className="text-gray-300 text-lg mb-2">위에서 아티스트를 검색하고 즐겨찾기에 추가하세요</p>
+          <p className="text-gray-500 text-sm">최신 발매 정보가 여기에 표시됩니다</p>
         </section>
       )}
     </div>

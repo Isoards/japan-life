@@ -13,6 +13,10 @@ const SPOT_CATEGORIES: { key: SpotCategory; label: string; icon: string }[] = [
   { key: "shopping", label: "쇼핑", icon: "🛍️" },
   { key: "daily", label: "생활", icon: "🏪" },
   { key: "work", label: "직장", icon: "💼" },
+  { key: "government", label: "관공서", icon: "🏛️" },
+  { key: "medical", label: "의료", icon: "🏥" },
+  { key: "finance", label: "금융", icon: "🏦" },
+  { key: "transport", label: "교통", icon: "🚉" },
   { key: "other", label: "기타", icon: "📌" },
 ];
 

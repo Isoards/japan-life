@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
 import type { Note } from "@/lib/types";
+import { noteSchema, notePatchSchema, idSchema, parseOrError } from "@/lib/validations";
 
 const STORE_NAME = "notes";
 
@@ -19,41 +20,48 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  if (!body.japanese?.trim()) return NextResponse.json({ error: "일본어 텍스트가 필요합니다" }, { status: 400 });
-  if (!body.korean?.trim()) return NextResponse.json({ error: "한국어 뜻이 필요합니다" }, { status: 400 });
-  const notes = await readStore<Note[]>(STORE_NAME, []);
+  const parsed = parseOrError(noteSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
+  const notes = await readStore<Note[]>(STORE_NAME, []);
   const newNote: Note = {
-    ...body,
-    japanese: body.japanese.trim(),
-    korean: body.korean.trim(),
     id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    category: parsed.data.category,
+    japanese: parsed.data.japanese.trim(),
+    korean: parsed.data.korean.trim(),
+    reading: parsed.data.reading,
+    memo: parsed.data.memo,
   };
   notes.push(newNote);
   await safeSave(notes);
-
   return NextResponse.json(notes);
 }
 
 export async function PATCH(request: NextRequest) {
-  const { id, ...updates } = await request.json();
-  if (!id) return NextResponse.json({ error: "id가 필요합니다" }, { status: 400 });
+  const body = await request.json();
+  const parsed = parseOrError(notePatchSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const notes = await readStore<Note[]>(STORE_NAME, []);
-  const note = notes.find((n) => n.id === id);
+  const note = notes.find((n) => n.id === parsed.data.id);
   if (!note) return NextResponse.json({ error: "항목을 찾을 수 없습니다" }, { status: 404 });
-  if (updates.japanese !== undefined) note.japanese = updates.japanese;
-  if (updates.reading !== undefined) note.reading = updates.reading;
-  if (updates.korean !== undefined) note.korean = updates.korean;
-  if (updates.memo !== undefined) note.memo = updates.memo;
-  if (updates.category !== undefined) note.category = updates.category;
+
+  note.japanese = parsed.data.japanese;
+  note.reading = parsed.data.reading;
+  note.korean = parsed.data.korean;
+  note.memo = parsed.data.memo;
+  note.category = parsed.data.category;
   await safeSave(notes);
   return NextResponse.json(notes);
 }
 
 export async function DELETE(request: NextRequest) {
-  const { id } = await request.json();
+  const body = await request.json();
+  const parsed = parseOrError(idSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const notes = await readStore<Note[]>(STORE_NAME, []);
-  const updated = notes.filter((n) => n.id !== id);
+  const updated = notes.filter((n) => n.id !== parsed.data.id);
   await safeSave(updated);
   return NextResponse.json(updated);
 }

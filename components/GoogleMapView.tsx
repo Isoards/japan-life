@@ -10,6 +10,10 @@ const CATEGORY_COLORS: Record<SpotCategory, string> = {
   shopping: "#8b5cf6",
   daily: "#10b981",
   work: "#3b82f6",
+  government: "#0ea5e9",
+  medical: "#f43f5e",
+  finance: "#eab308",
+  transport: "#14b8a6",
   other: "#6b7280",
 };
 
@@ -19,6 +23,10 @@ const CATEGORY_LABELS: Record<SpotCategory, string> = {
   shopping: "SH",
   daily: "D",
   work: "W",
+  government: "G",
+  medical: "H",
+  finance: "B",
+  transport: "T",
   other: "?",
 };
 
@@ -66,6 +74,10 @@ const CATEGORY_EMOJI: Record<SpotCategory, string> = {
   shopping: "🛍️",
   daily: "🏪",
   work: "💼",
+  government: "🏛️",
+  medical: "🏥",
+  finance: "🏦",
+  transport: "🚉",
   other: "📌",
 };
 

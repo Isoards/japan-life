@@ -44,7 +44,7 @@
     "category": "pre-departure",
     "title": "주식/ETF 전량 매도",
     "description": "일본 거주자 신분 시 세금 복잡성 방지를 위해 현금화",
-    "checked": false,
+    "checked": true,
     "priority": "high"
   },
   {

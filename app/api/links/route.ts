@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
 import type { QuickLink } from "@/lib/types";
+import { linkSchema, linkPatchSchema, idSchema, parseOrError } from "@/lib/validations";
 
 const STORE_NAME = "links";
 
@@ -36,36 +37,46 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);
+  const parsed = parseOrError(linkSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
+  const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);
   const newLink: QuickLink = {
-    ...body,
     id: `link-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: parsed.data.title,
+    url: parsed.data.url,
+    category: parsed.data.category,
+    icon: parsed.data.icon,
   };
   links.push(newLink);
   await safeSave(links);
-
   return NextResponse.json(links);
 }
 
 export async function PATCH(request: NextRequest) {
-  const { id, ...updates } = await request.json();
-  if (!id) return NextResponse.json({ error: "id가 필요합니다" }, { status: 400 });
+  const body = await request.json();
+  const parsed = parseOrError(linkPatchSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);
-  const link = links.find((l) => l.id === id);
+  const link = links.find((l) => l.id === parsed.data.id);
   if (!link) return NextResponse.json({ error: "항목을 찾을 수 없습니다" }, { status: 404 });
-  if (updates.title !== undefined) link.title = updates.title;
-  if (updates.url !== undefined) link.url = updates.url;
-  if (updates.category !== undefined) link.category = updates.category;
-  if (updates.icon !== undefined) link.icon = updates.icon;
+
+  link.title = parsed.data.title;
+  link.url = parsed.data.url;
+  link.category = parsed.data.category;
+  link.icon = parsed.data.icon;
   await safeSave(links);
   return NextResponse.json(links);
 }
 
 export async function DELETE(request: NextRequest) {
-  const { id } = await request.json();
+  const body = await request.json();
+  const parsed = parseOrError(idSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const links = await readStore<QuickLink[]>(STORE_NAME, DEFAULT_LINKS);
-  const updated = links.filter((l) => l.id !== id);
+  const updated = links.filter((l) => l.id !== parsed.data.id);
   await safeSave(updated);
   return NextResponse.json(updated);
 }
