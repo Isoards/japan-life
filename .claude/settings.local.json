@@ -11,7 +11,8 @@
       "Bash(/Users/iso/Documents/GitHub/jpop-dashboard/public/icon-512x512.svg << 'SVGEOF'\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"512\" height=\"512\" viewBox=\"0 0 512 512\">\n  <defs>\n    <linearGradient id=\"textGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n      <stop offset=\"0%\" stop-color=\"#f472b6\"/>\n      <stop offset=\"50%\" stop-color=\"#a78bfa\"/>\n      <stop offset=\"100%\" stop-color=\"#818cf8\"/>\n    </linearGradient>\n  </defs>\n  <rect width=\"512\" height=\"512\" rx=\"108\" ry=\"108\" fill=\"#0a0a0a\"/>\n  <text x=\"256\" y=\"308\" text-anchor=\"middle\" font-family=\"'Helvetica Neue', Arial, sans-serif\" font-size=\"234\" font-weight=\"700\" fill=\"url\\(#textGrad\\)\" letter-spacing=\"-5\">JL</text>\n</svg>\nSVGEOF)",
       "WebFetch(domain:www.kumyoung.com)",
       "WebFetch(domain:www.tjmedia.com)",
-      "WebFetch(domain:api.manana.kr)"
+      "WebFetch(domain:api.manana.kr)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -75,6 +75,15 @@ export interface BudgetCategory {
   label: string;
   amount: number;
   icon: string;
+  sheetCategories: string[];
+}
+
+export interface SheetsSummary {
+  month: string;
+  byCategory: Record<string, number>;
+  totalIncome: number;
+  totalExpense: number;
+  totalSaving: number;
 }
 
 export type BudgetPeriod = "apr-jul" | "aug-dec" | "year2";

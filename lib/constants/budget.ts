@@ -14,29 +14,48 @@ export const BUDGET_PERIOD_INCOME: Record<BudgetPeriod, number> = {
   "year2": 190_000,
 };
 
-/** 기간별 카테고리 프리셋 */
+/** Sheets 수입 카테고리 */
+export const INCOME_CATEGORIES = ["급여", "상여", "부가 수입"];
+
+/** Sheets 저축/투자 카테고리 */
+export const SAVING_CATEGORIES = ["NISA", "가족 송금"];
+
+/** 기간별 카테고리 프리셋 (Sheets 카테고리 매핑 포함) */
 export const BUDGET_PRESETS: Record<BudgetPeriod, BudgetCategory[]> = {
   "apr-jul": [
-    { id: "fixed", label: "고정비 (주거/통신/공과금/구독)", amount: 45_000, icon: "🏠" },
-    { id: "food", label: "식비 (마트/편의점/외식)", amount: 40_000, icon: "🍱" },
-    { id: "living", label: "생활/건강 (생필품/의료)", amount: 5_000, icon: "🧴" },
-    { id: "hobby", label: "취미/쇼핑 (게임/옷/유흥)", amount: 30_000, icon: "🎮" },
-    { id: "nisa", label: "新NISA 적립", amount: 30_000, icon: "📈" },
-    { id: "car-save", label: "차량 저축 (8월 구입용)", amount: 60_000, icon: "🚗" },
+    { id: "fixed", label: "주거/고정비", amount: 45_000, icon: "🏠", sheetCategories: ["주거", "공과금", "통신", "구독", "보험", "세금"] },
+    { id: "food", label: "식비", amount: 40_000, icon: "🍱", sheetCategories: ["장보기", "배달", "외식", "커피/간식"] },
+    { id: "living", label: "생활/건강", amount: 5_000, icon: "🧴", sheetCategories: ["생활용품", "의료/건강", "미용/화장"] },
+    { id: "transport", label: "교통/차량", amount: 5_000, icon: "🚗", sheetCategories: ["주차", "차량관리", "대중교통", "택시"] },
+    { id: "leisure", label: "여가/문화", amount: 15_000, icon: "🎮", sheetCategories: ["여가 기타", "문화생활", "도서", "운동", "여행"] },
+    { id: "shopping", label: "쇼핑/패션", amount: 10_000, icon: "👕", sheetCategories: ["옷", "장신구", "기타"] },
+    { id: "edu", label: "교육", amount: 0, icon: "📚", sheetCategories: ["강의"] },
+    { id: "social", label: "사교", amount: 10_000, icon: "🤝", sheetCategories: ["가족", "지인", "모임"] },
+    { id: "nisa", label: "NISA", amount: 30_000, icon: "📈", sheetCategories: ["NISA"] },
+    { id: "remit", label: "가족 송금", amount: 0, icon: "💸", sheetCategories: ["가족 송금"] },
   ],
   "aug-dec": [
-    { id: "fixed", label: "고정비 (주거/통신/공과금)", amount: 45_000, icon: "🏠" },
-    { id: "food", label: "식비 (마트/외식/편의점)", amount: 40_000, icon: "🍱" },
-    { id: "hobby", label: "취미/쇼핑 (게임/옷/유흥)", amount: 30_000, icon: "🎮" },
-    { id: "living", label: "생활/건강 (생필품/의료)", amount: 15_000, icon: "🧴" },
-    { id: "car", label: "자동차 (할부/보험/기름값)", amount: 50_000, icon: "🚗" },
-    { id: "nisa", label: "新NISA 적립", amount: 30_000, icon: "📈" },
-    { id: "reserve", label: "예비비 (비상금)", amount: 10_000, icon: "🔒" },
+    { id: "fixed", label: "주거/고정비", amount: 45_000, icon: "🏠", sheetCategories: ["주거", "공과금", "통신", "구독", "보험", "세금"] },
+    { id: "food", label: "식비", amount: 40_000, icon: "🍱", sheetCategories: ["장보기", "배달", "외식", "커피/간식"] },
+    { id: "living", label: "생활/건강", amount: 15_000, icon: "🧴", sheetCategories: ["생활용품", "의료/건강", "미용/화장"] },
+    { id: "transport", label: "교통/차량", amount: 50_000, icon: "🚗", sheetCategories: ["주차", "차량관리", "대중교통", "택시"] },
+    { id: "leisure", label: "여가/문화", amount: 20_000, icon: "🎮", sheetCategories: ["여가 기타", "문화생활", "도서", "운동", "여행"] },
+    { id: "shopping", label: "쇼핑/패션", amount: 10_000, icon: "👕", sheetCategories: ["옷", "장신구", "기타"] },
+    { id: "edu", label: "교육", amount: 0, icon: "📚", sheetCategories: ["강의"] },
+    { id: "social", label: "사교", amount: 10_000, icon: "🤝", sheetCategories: ["가족", "지인", "모임"] },
+    { id: "nisa", label: "NISA", amount: 30_000, icon: "📈", sheetCategories: ["NISA"] },
+    { id: "remit", label: "가족 송금", amount: 0, icon: "💸", sheetCategories: ["가족 송금"] },
   ],
   "year2": [
-    { id: "fixed", label: "고정비 (공과금/통신/구독)", amount: 20_000, icon: "🏠" },
-    { id: "variable", label: "변동비 (식비/취미/쇼핑/의료)", amount: 85_000, icon: "🍱" },
-    { id: "car", label: "차량 유지 (할부/보험/유류)", amount: 50_000, icon: "🚗" },
-    { id: "nisa", label: "新NISA 투자 (츠미타테)", amount: 35_000, icon: "📈" },
+    { id: "fixed", label: "주거/고정비", amount: 20_000, icon: "🏠", sheetCategories: ["주거", "공과금", "통신", "구독", "보험", "세금"] },
+    { id: "food", label: "식비", amount: 40_000, icon: "🍱", sheetCategories: ["장보기", "배달", "외식", "커피/간식"] },
+    { id: "living", label: "생활/건강", amount: 10_000, icon: "🧴", sheetCategories: ["생활용품", "의료/건강", "미용/화장"] },
+    { id: "transport", label: "교통/차량", amount: 50_000, icon: "🚗", sheetCategories: ["주차", "차량관리", "대중교통", "택시"] },
+    { id: "leisure", label: "여가/문화", amount: 15_000, icon: "🎮", sheetCategories: ["여가 기타", "문화생활", "도서", "운동", "여행"] },
+    { id: "shopping", label: "쇼핑/패션", amount: 10_000, icon: "👕", sheetCategories: ["옷", "장신구", "기타"] },
+    { id: "edu", label: "교육", amount: 0, icon: "📚", sheetCategories: ["강의"] },
+    { id: "social", label: "사교", amount: 10_000, icon: "🤝", sheetCategories: ["가족", "지인", "모임"] },
+    { id: "nisa", label: "NISA", amount: 35_000, icon: "📈", sheetCategories: ["NISA"] },
+    { id: "remit", label: "가족 송금", amount: 0, icon: "💸", sheetCategories: ["가족 송금"] },
   ],
 };

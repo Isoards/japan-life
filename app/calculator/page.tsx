@@ -1,23 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type {
-  SalaryBreakdown,
-  BudgetCategory,
-  BudgetData,
-  BudgetPeriod,
-} from "@/lib/types";
-import {
-  calculateSalary,
-  getDefaultBudget,
-  convertCurrency,
-  getBudgetByPeriod,
-  BUDGET_PERIOD_LABELS,
-  BUDGET_PERIOD_INCOME,
-} from "@/lib/calculator";
-import { useBudget, useExchangeRate, mutateAPI } from "@/lib/hooks/use-api";
+import type { SalaryBreakdown } from "@/lib/types";
+import { calculateSalary, convertCurrency } from "@/lib/calculator";
+import { useExchangeRate } from "@/lib/hooks/use-api";
 
-type Tab = "salary" | "budget" | "exchange";
+type Tab = "salary" | "exchange";
 
 export default function CalculatorPage() {
   const [tab, setTab] = useState<Tab>("salary");
@@ -26,10 +14,10 @@ export default function CalculatorPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-          생활비 & 급여 계산기
+          급여 & 환율 계산기
         </h1>
         <p className="text-gray-400 mt-1">
-          일본 급여 실수령액, 토치기현 생활비, 환율 계산
+          일본 급여 실수령액, 환율 계산
         </p>
       </div>
 
@@ -38,7 +26,6 @@ export default function CalculatorPage() {
         {(
           [
             { key: "salary", label: "💴 급여 계산기" },
-            { key: "budget", label: "🏠 생활비 플래너" },
             { key: "exchange", label: "💱 환율 계산기" },
           ] as const
         ).map((t) => (
@@ -57,7 +44,6 @@ export default function CalculatorPage() {
       </div>
 
       {tab === "salary" && <SalaryTab />}
-      {tab === "budget" && <BudgetTab />}
       {tab === "exchange" && <ExchangeTab />}
     </div>
   );
@@ -304,228 +290,6 @@ function SalaryTab() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ──────────── 생활비 플래너 ──────────── */
-const ALL_PERIODS: BudgetPeriod[] = ["apr-jul", "aug-dec", "year2"];
-
-function BudgetTab() {
-  const { data: budgetData, isLoading } = useBudget();
-  const [period, setPeriod] = useState<BudgetPeriod>("apr-jul");
-  const [categories, setCategories] =
-    useState<BudgetCategory[]>(getDefaultBudget());
-  const [income, setIncome] = useState<string>("270000");
-  const [initialized, setInitialized] = useState(false);
-
-  // Sync local state when SWR data arrives
-  useEffect(() => {
-    if (!budgetData || initialized) return;
-    if (budgetData.categories.length > 0) setCategories(budgetData.categories);
-    if (budgetData.income > 0) setIncome(String(budgetData.income));
-    if (budgetData.period) setPeriod(budgetData.period);
-    setInitialized(true);
-  }, [budgetData, initialized]);
-
-  const save = async (cats: BudgetCategory[], inc: string, p: BudgetPeriod) => {
-    const incVal = parseInt(inc) || 0;
-    await mutateAPI("/api/budget", "POST", {
-      income: incVal,
-      categories: cats,
-      period: p,
-    });
-  };
-
-  const switchPeriod = (p: BudgetPeriod) => {
-    setPeriod(p);
-    const newCats = getBudgetByPeriod(p);
-    const newIncome = String(BUDGET_PERIOD_INCOME[p]);
-    setCategories(newCats);
-    setIncome(newIncome);
-    save(newCats, newIncome, p);
-  };
-
-  const updateAmount = (id: string, amount: number) => {
-    const updated = categories.map((c) => (c.id === id ? { ...c, amount } : c));
-    setCategories(updated);
-    save(updated, income, period);
-  };
-
-  const incomeVal = parseInt(income) || 0;
-  const totalExpense = categories.reduce((sum, c) => sum + c.amount, 0);
-  const remaining = incomeVal - totalExpense;
-  const fmt = (n: number) => n.toLocaleString("ja-JP");
-
-  if (isLoading) {
-    return (
-      <div className="text-gray-400 py-10 text-center">불러오는 중...</div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Period selector */}
-      <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-        {ALL_PERIODS.map((p) => (
-          <button
-            key={p}
-            onClick={() => switchPeriod(p)}
-            className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              period === p
-                ? "bg-white/10 text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            {BUDGET_PERIOD_LABELS[p]}
-          </button>
-        ))}
-      </div>
-
-      {/* Period description */}
-      <div className="rounded-xl border border-white/10 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-4">
-        <div className="text-sm text-gray-300">
-          {period === "apr-jul" &&
-            "연수/실습 기간. 8월 차량 구입을 위해 월 6만엔 저축 목표"}
-          {period === "aug-dec" &&
-            "본배속 + 차량 구입. 기존 저축액을 유지비로 전환"}
-          {period === "year2" && "안정기. 부양공제 환급금 연 +23만엔 포함"}
-        </div>
-      </div>
-
-      {/* Income input */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <label className="block text-sm text-gray-400 mb-2">
-          월 수입 (실수령액, 엔)
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500">¥</span>
-          <input
-            type="number"
-            value={income}
-            onChange={(e) => {
-              setIncome(e.target.value);
-              save(categories, e.target.value, period);
-            }}
-            className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-lg font-mono focus:outline-none focus:border-purple-500/50"
-          />
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-          <div className="text-xs text-gray-500">수입</div>
-          <div className="text-lg font-bold text-white">¥{fmt(incomeVal)}</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-          <div className="text-xs text-gray-500">총 지출</div>
-          <div className="text-lg font-bold text-pink-400">
-            ¥{fmt(totalExpense)}
-          </div>
-        </div>
-        <div
-          className={`rounded-xl border p-4 text-center ${
-            remaining >= 0
-              ? "border-emerald-500/20 bg-emerald-500/5"
-              : "border-red-500/20 bg-red-500/5"
-          }`}
-        >
-          <div className="text-xs text-gray-500">잔액</div>
-          <div
-            className={`text-lg font-bold ${remaining >= 0 ? "text-emerald-400" : "text-red-400"}`}
-          >
-            ¥{fmt(remaining)}
-          </div>
-        </div>
-      </div>
-
-      {/* Expense bar */}
-      {incomeVal > 0 && (
-        <div className="space-y-1">
-          <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                totalExpense > incomeVal
-                  ? "bg-gradient-to-r from-red-500 to-red-400"
-                  : "bg-gradient-to-r from-pink-500 to-purple-500"
-              }`}
-              style={{
-                width: `${Math.min((totalExpense / incomeVal) * 100, 100)}%`,
-              }}
-            />
-          </div>
-          <div className="text-xs text-gray-500 text-right">
-            {incomeVal > 0 ? ((totalExpense / incomeVal) * 100).toFixed(0) : 0}%
-            사용
-          </div>
-        </div>
-      )}
-
-      {/* Category breakdown */}
-      <div className="space-y-2">
-        {categories.map((cat) => {
-          const pct =
-            incomeVal > 0 ? ((cat.amount / incomeVal) * 100).toFixed(1) : "0";
-          return (
-            <div
-              key={cat.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5"
-            >
-              <span className="text-lg shrink-0">{cat.icon}</span>
-              <span className="text-sm text-gray-300 flex-1 min-w-0 truncate">
-                {cat.label}
-              </span>
-              <span className="text-xs text-gray-500 shrink-0">{pct}%</span>
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-gray-500 text-sm">¥</span>
-                <input
-                  type="number"
-                  value={cat.amount}
-                  onChange={(e) =>
-                    updateAmount(cat.id, parseInt(e.target.value) || 0)
-                  }
-                  className="w-20 px-2 py-1 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-mono text-right focus:outline-none focus:border-purple-500/50"
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Year 2 tax refund info */}
-      {period === "year2" && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-          <h3 className="text-sm font-bold text-emerald-400 mb-2">
-            연말정산 부양공제 환급
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-gray-500">부양가족 3명</div>
-              <div className="text-white">
-                아빠(38만) + 엄마(38만) + 할머니(48만)
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-500">연간 송금액</div>
-              <div className="text-white">¥1,240,000 (보너스 활용)</div>
-            </div>
-            <div>
-              <div className="text-gray-500">연간 환급/절감</div>
-              <div className="text-emerald-400 font-bold">+¥230,000/년</div>
-            </div>
-            <div>
-              <div className="text-gray-500">월 환산</div>
-              <div className="text-emerald-400 font-bold">+¥19,167/월</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <p className="text-xs text-gray-600">
-        * 토치기현 Honda 기준 생활비입니다. 기간 전환 시 프리셋이 적용되며,
-        항목별 금액을 수정하면 자동 저장됩니다.
-      </p>
     </div>
   );
 }

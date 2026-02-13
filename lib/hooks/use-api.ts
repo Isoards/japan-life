@@ -8,6 +8,7 @@ import type {
   BudgetData,
   ITunesTrack,
   KaraokeSong,
+  SheetsSummary,
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
@@ -101,6 +102,12 @@ export function useExchangeRate() {
   return useSWR<ExchangeRateData>("/api/exchange-rate", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 600_000, // 10분 중복 방지
+  });
+}
+
+export function useSheetsSummary(month: string) {
+  return useSWR<SheetsSummary>(`/api/sheets?month=${month}`, fetcher, {
+    revalidateOnFocus: false,
   });
 }
 
