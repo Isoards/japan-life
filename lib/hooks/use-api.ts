@@ -7,6 +7,7 @@ import type {
   QuickLink,
   BudgetData,
   ITunesTrack,
+  KaraokeSong,
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
@@ -101,6 +102,15 @@ export function useExchangeRate() {
     revalidateOnFocus: false,
     dedupingInterval: 600_000, // 10분 중복 방지
   });
+}
+
+export function useKaraokeSearch(query: string | null, type: "song" | "singer" = "song") {
+  return useSWR<KaraokeSong[]>(
+    query && query.length >= 1
+      ? `/api/karaoke?q=${encodeURIComponent(query)}&type=${type}`
+      : null,
+    fetcher,
+  );
 }
 
 export function useSearch(query: string | null) {

@@ -133,3 +133,15 @@ export interface QuickLink {
   category: string;
   icon?: string;
 }
+
+// ── 노래방 검색 ──
+
+export interface KaraokeSong {
+  brand: "tj" | "kumyoung";
+  no: string;
+  title: string;
+  singer: string;
+  composer: string;
+  lyricist: string;
+  release: string;
+}
