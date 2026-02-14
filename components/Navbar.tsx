@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navLinks = [
-  { href: "/", label: "대시보드" },
   { href: "/artists", label: "아티스트" },
   { href: "/karaoke", label: "노래방" },
   { href: "/concerts", label: "콘서트" },
@@ -24,15 +23,18 @@ export default function Navbar() {
     <nav className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="shrink-0">
+          <Link href="/" className="shrink-0 flex items-center gap-2">
             <Image
               src="/jp_icon_v2.png"
               alt="Japan Life"
               width={512}
               height={512}
-              className="h-9 w-9 rounded-full"
+              className="h-18 w-18 rounded-full"
               priority
             />
+            <span className="text-sm font-semibold text-white hidden sm:block">
+              Japan Life
+            </span>
           </Link>
           <div className="flex gap-1 items-center overflow-x-auto scrollbar-hide ml-4">
             {navLinks.map((link) => {
@@ -54,29 +56,6 @@ export default function Navbar() {
                 </Link>
               );
             })}
-            <Link
-              href="/search"
-              className={`ml-2 p-2 rounded-lg transition-colors shrink-0 ${
-                pathname === "/search"
-                  ? "bg-white/10 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-              title="아티스트 검색"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </Link>
           </div>
         </div>
       </div>

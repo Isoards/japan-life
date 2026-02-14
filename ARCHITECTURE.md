@@ -3,7 +3,7 @@
 ## 개요
 
 **Japan Life**는 일본 이주를 준비하는 한국인 직장인을 위한 종합 생활 대시보드입니다.
-J-Pop/K-Pop 아티스트 추적, 재정 계획, 이민 체크리스트, 생활 가이드, 지도 탐색 등을 하나의 웹 애플리케이션에 통합합니다.
+J-Pop/K-Pop 아티스트 추적, 콘서트 티켓 관리, 재정 계획, 이민 체크리스트, 노래방 검색, 주간 기록 등을 하나의 웹 애플리케이션에 통합합니다.
 
 ---
 
@@ -16,20 +16,26 @@ J-Pop/K-Pop 아티스트 추적, 재정 계획, 이민 체크리스트, 생활 �
 | **UI 라이브러리** | React | 19.2.3 |
 | **스타일링** | Tailwind CSS | 4.0 |
 | **상태 관리 / 데이터 페칭** | SWR | 2.4.0 |
+| **유효성 검증** | Zod | 4.x |
 | **캘린더** | react-calendar | 6.0.0 |
-| **지도** | Google Maps JavaScript API | - |
 | **런타임** | Node.js (Alpine) | 20 |
 | **컨테이너** | Docker (multi-stage build) | - |
-| **데이터 저장소** | 파일 기반 JSON | - |
+| **데이터 저장소** | 파일 기반 JSON (스키마 버전 관리) | - |
 
 ### 외부 API
 
-| API | 용도 |
-|-----|------|
-| **iTunes Search API** | 아티스트 검색, 트랙 정보, 앨범 아트워크 |
-| **Google Maps JS API** | 인터랙티브 지도, 커스텀 마커 |
-| **Google Translate API** | 일본어 뉴스 → 한국어 번역 |
-| **Google News RSS** | 콘서트/이벤트 뉴스 수집 |
+| API | 용도 | 사용 위치 |
+|-----|------|-----------|
+| **iTunes Search API** | 아티스트 검색, 트랙 정보, 앨범 아트워크 | `/api/search`, `/api/releases` |
+| **Deezer API** | 아티스트 프로필 사진 | `/api/search` |
+| **Apple Music RSS** | 일본 음악 차트 Top 100 | `/api/top-artists` |
+| **Wise API** | 실시간 환율 (KRW↔JPY↔USD) | `/api/exchange-rates` |
+| **open.er-api.com** | 환율 폴백 (Wise 실패 시) | `/api/exchange-rates`, `/api/exchange-rate` |
+| **Google Sheets API** | 실제 지출 데이터 조회 | `/api/sheets` |
+| **Google Translate API** | 일본어 뉴스 → 한국어 번역 | `/api/news` |
+| **Google News RSS** | 콘서트/이벤트 뉴스 수집 | `/api/news` |
+| **Twitter oEmbed API** | 트윗 텍스트 추출 (콘서트 가져오기) | `/api/user-concerts/import` |
+| **manana.kr API** | TJ/금영 노래방 곡 검색 | `/api/karaoke` |
 
 ---
 
@@ -37,120 +43,171 @@ J-Pop/K-Pop 아티스트 추적, 재정 계획, 이민 체크리스트, 생활 �
 
 ```
 japan-life/
-├── app/                              # Next.js App Router (페이지 + API)
-│   ├── api/                          # 백엔드 API 라우트
-│   │   ├── budget/route.ts           #   예산 관리
-│   │   ├── checklist/route.ts        #   체크리스트 CRUD
-│   │   ├── favorites/route.ts        #   즐겨찾기 아티스트
-│   │   ├── links/route.ts            #   빠른 링크
-│   │   ├── news/route.ts             #   콘서트 뉴스 + 번역
-│   │   ├── notes/route.ts            #   일본어 노트
-│   │   ├── releases/route.ts         #   최신 릴리스
-│   │   ├── search/route.ts           #   아티스트 검색
-│   │   ├── spots/route.ts            #   지도 스팟
-│   │   └── user-concerts/route.ts    #   개인 콘서트 일정
-│   ├── artists/                      # 아티스트 브라우징/상세 페이지
-│   ├── calculator/                   # 급여 & 예산 계산기
-│   ├── checklist/                    # 이민/취업 체크리스트
-│   ├── concerts/                     # 콘서트 트래킹
-│   ├── expenses/                     # 지출 추적
-│   ├── guide/                        # 생활 가이드
-│   ├── map/                          # Google Maps 인터랙티브 지도
-│   ├── notes/                        # 일본어 노트 & 빠른 링크
-│   ├── search/                       # 아티스트 검색
-│   ├── DashboardClient.tsx           # 메인 대시보드 컴포넌트
-│   ├── layout.tsx                    # 루트 레이아웃 (Navbar 포함)
-│   └── page.tsx                      # 홈 페이지
+├── app/                                # Next.js App Router (페이지 + API)
+│   ├── api/                            # 백엔드 API 라우트
+│   │   ├── budget/route.ts             #   예산 관리 CRUD
+│   │   ├── checklist/route.ts          #   체크리스트 CRUD
+│   │   ├── exchange-rate/route.ts      #   단순 JPY→KRW 환율 (계산기용)
+│   │   ├── exchange-rates/route.ts     #   멀티 환율 (Wise + 폴백, 10분 캐시)
+│   │   ├── favorites/route.ts          #   즐겨찾기 아티스트
+│   │   ├── karaoke/route.ts            #   노래방 곡 검색 (TJ/금영)
+│   │   ├── links/route.ts              #   빠른 링크
+│   │   ├── logs/route.ts               #   주간 기록 CRUD
+│   │   ├── news/route.ts               #   콘서트 뉴스 + 번역
+│   │   ├── notes/route.ts              #   일본어 노트
+│   │   ├── releases/route.ts           #   최신 릴리스
+│   │   ├── search/route.ts             #   아티스트 검색 (iTunes + Deezer)
+│   │   ├── sheets/route.ts             #   Google Sheets 지출 데이터
+│   │   ├── top-artists/route.ts        #   Apple Music 일본 차트 Top 100
+│   │   └── user-concerts/              #   콘서트 관리
+│   │       ├── route.ts                #     콘서트 CRUD (Zod 검증)
+│   │       └── import/route.ts         #     텍스트/URL → 콘서트 파싱
+│   │
+│   ├── artists/                        # 아티스트 브라우징
+│   │   ├── page.tsx                    #   아티스트 목록
+│   │   └── [slug]/page.tsx             #   아티스트 상세 (디스코그래피)
+│   ├── calculator/page.tsx             # 급여 & 예산 & 환율 계산기
+│   ├── checklist/page.tsx              # 이민/취업 체크리스트
+│   ├── concerts/                       # 콘서트 트래킹
+│   │   ├── page.tsx                    #   콘서트 목록 (캘린더+리스트, CRUD)
+│   │   ├── import/page.tsx             #   콘서트 가져오기 (텍스트/URL 파싱)
+│   │   └── [id]/page.tsx               #   콘서트 상세 (타임라인, 상태 관리)
+│   ├── expenses/page.tsx               # Google Sheets 기반 지출 추적
+│   ├── guide/page.tsx                  # 생활 가이드
+│   ├── karaoke/page.tsx                # 노래방 곡 검색
+│   ├── logs/page.tsx                   # 주간 기록 (기술/표현/실수/메모)
+│   ├── notes/page.tsx                  # 일본어 노트 & 빠른 링크
+│   ├── offline/page.tsx                # 오프라인 페이지
+│   ├── search/page.tsx                 # 아티스트 검색
+│   ├── DashboardClient.tsx             # 메인 대시보드 (요약 카드 + 마감 알림)
+│   ├── layout.tsx                      # 루트 레이아웃 (Navbar, Toast)
+│   └── page.tsx                        # 홈 페이지
 │
-├── components/                       # 재사용 React 컴포넌트
-│   ├── ArtistCard.tsx                #   아티스트 카드 (그리드 표시)
-│   ├── ArtistNews.tsx                #   아티스트 뉴스 피드
-│   ├── ConcertCalendar.tsx           #   캘린더 뷰
-│   ├── ConcertList.tsx               #   콘서트 목록 뷰
-│   ├── FavoriteButton.tsx            #   즐겨찾기 토글
-│   ├── GoogleMapView.tsx             #   Google Maps 커스텀 지도
-│   ├── LatestRelease.tsx             #   최신 트랙 표시
-│   ├── MusicButton.tsx               #   음악 재생 연동
-│   ├── Navbar.tsx                    #   네비게이션 바 (8개 라우트)
-│   ├── SearchFilter.tsx              #   검색/필터 UI
-│   ├── ServiceWorkerRegistration.tsx #   PWA 서비스 워커
-│   ├── SpotifyButton.tsx             #   Spotify 연동
-│   ├── TicketLinks.tsx               #   티켓 링크
-│   └── TrackList.tsx                 #   트랙 리스트
+├── components/                         # 재사용 React 컴포넌트
+│   ├── ArtistCard.tsx                  #   아티스트 카드 (그리드 표시)
+│   ├── ArtistNews.tsx                  #   아티스트 뉴스 피드
+│   ├── ConcertCalendar.tsx             #   캘린더 뷰
+│   ├── ConcertList.tsx                 #   콘서트 목록 뷰
+│   ├── ConfirmDialog.tsx               #   확인 다이얼로그 (삭제 등)
+│   ├── FavoriteButton.tsx              #   즐겨찾기 토글
+│   ├── LatestRelease.tsx               #   최신 트랙 표시
+│   ├── MusicButton.tsx                 #   음악 재생 연동
+│   ├── Navbar.tsx                      #   네비게이션 바
+│   ├── SearchFilter.tsx                #   검색/필터 UI
+│   ├── ServiceWorkerRegistration.tsx   #   PWA 서비스 워커
+│   ├── SpotifyButton.tsx               #   Spotify 연동
+│   ├── TicketLinks.tsx                 #   티켓 링크
+│   ├── TicketTimeline.tsx              #   티켓 마일스톤 타임라인 (세로)
+│   ├── Toast.tsx                       #   토스트 알림 (Context API)
+│   └── TrackList.tsx                   #   트랙 리스트
 │
-├── data/                             # 정적 데이터
-│   ├── artists.json                  #   피처드 아티스트 (YOASOBI, Ado, 요네즈 켄시)
-│   ├── concerts.json                 #   샘플 콘서트 데이터
-│   ├── checklist-defaults.json       #   체크리스트 기본 항목 (50+개)
-│   ├── guide-content.json            #   생활 가이드 콘텐츠
-│   └── user/                         #   사용자 데이터 (런타임 생성)
+├── data/                               # 정적 데이터
+│   ├── artists.json                    #   피처드 아티스트
+│   ├── concerts.json                   #   샘플 콘서트 데이터
+│   ├── checklist-defaults.json         #   체크리스트 기본 항목 (50+개)
+│   ├── guide-content.json              #   생활 가이드 콘텐츠
+│   └── user/                           #   사용자 데이터 (런타임 생성)
 │
-├── lib/                              # 유틸리티 함수 & 라이브러리
-│   ├── calculator.ts                 #   급여 계산, 예산, 환율 변환
-│   ├── checklist.ts                  #   체크리스트 로직
-│   ├── favorites.ts                  #   즐겨찾기 로직
-│   ├── fetcher.ts                    #   SWR용 fetch 래퍼
-│   ├── itunes.ts                     #   iTunes API 통합
-│   ├── spotify.ts                    #   Spotify 연동
-│   ├── store.ts                      #   JSON 파일 읽기/쓰기
-│   ├── types.ts                      #   TypeScript 타입 정의
-│   ├── userConcerts.ts               #   사용자 콘서트 로직
-│   ├── constants/                    #   세율, 예산 프리셋 등
-│   └── hooks/                        #   SWR 기반 커스텀 훅
-│       └── use-api.ts                #     useChecklist, useBudget 등
+├── lib/                                # 유틸리티 함수 & 라이브러리
+│   ├── calculator.ts                   #   급여 계산, 예산, 환율 변환
+│   ├── checklist.ts                    #   체크리스트 로직
+│   ├── concertParser.ts                #   일본어 콘서트 공지 텍스트 파서
+│   ├── favorites.ts                    #   즐겨찾기 로직
+│   ├── fetcher.ts                      #   SWR용 fetch 래퍼
+│   ├── itunes.ts                       #   iTunes API 통합
+│   ├── milestoneUtils.ts               #   마일스톤 조회 유틸 (다가오는 마감)
+│   ├── spotify.ts                      #   Spotify 연동
+│   ├── store.ts                        #   JSON 파일 저장소 (버전 관리 + 마이그레이션)
+│   ├── types.ts                        #   공통 TypeScript 타입 정의
+│   ├── userConcerts.ts                 #   콘서트 v2 타입 (마일스톤, 출처, 공연일시)
+│   ├── validations.ts                  #   Zod 스키마 (런타임 유효성 검증)
+│   ├── constants/
+│   │   ├── index.ts                    #     상수 re-export
+│   │   ├── tax.ts                      #     일본 세율 (2025-2026)
+│   │   └── budget.ts                   #     예산 프리셋 (시기별)
+│   └── hooks/
+│       └── use-api.ts                  #     SWR 커스텀 훅 (13개) + mutateAPI
 │
-├── public/                           # 정적 에셋 (아이콘, 매니페스트, SW)
-├── Dockerfile                        # Docker 이미지 빌드 (멀티 스테이지)
-├── docker-compose.yml                # 표준 배포 설정
-├── docker-compose.nas.yml            # Synology NAS 배포 설정
-├── next.config.ts                    # Next.js 설정 (standalone 출력)
-├── tsconfig.json                     # TypeScript 설정
-└── package.json                      # 의존성 관리
+├── public/                             # 정적 에셋
+│   ├── jp_icon_v2.png                  #   앱 아이콘 (favicon, PWA)
+│   ├── jp_logo_v2.png                  #   앱 로고 (대시보드, Navbar)
+│   ├── manifest.json                   #   PWA 매니페스트
+│   └── sw.js                           #   서비스 워커
+│
+├── Dockerfile                          # Docker 이미지 빌드 (멀티 스테이지)
+├── docker-compose.yml                  # 표준 배포 설정
+├── docker-compose.nas.yml              # Synology NAS 배포 설정
+├── next.config.ts                      # Next.js 설정 (standalone 출력)
+├── tsconfig.json                       # TypeScript 설정
+└── package.json                        # 의존성 관리
 ```
 
 ---
 
 ## 핵심 기능
 
-### 1. 음악 & 아티스트 탐색
-- iTunes API를 통한 아티스트 검색 및 브라우징
+### 1. 대시보드
+- 즐겨찾기 아티스트 수, 체크리스트 완료율, 콘서트 예정 수, 노트 수 요약 카드
+- 실시간 환율 카드 (KRW↔JPY↔USD, Wise API)
+- **이번 주 마감 카드**: 7일 이내 예정된 티켓 마일스톤 최대 3개 표시
+- 상단 로고 (그라데이션 글로우 효과)
+
+### 2. 음악 & 아티스트 탐색
+- iTunes API를 통한 아티스트 검색 + Deezer 프로필 사진
 - 즐겨찾기 아티스트 관리 및 최신 릴리스 자동 추적
 - 아티스트 상세 정보 (장르, 디스코그래피, 앨범 아트워크)
+- Apple Music 일본 차트 Top 100 아티스트
 - Spotify/iTunes 연동 음악 미리듣기
 - 일본어 콘서트 뉴스 → 한국어 자동 번역
 
-### 2. 콘서트 트래킹
-- 개인 콘서트 일정 관리 (제목, 날짜, 장소, 도시, 메모)
-- 캘린더 뷰 + 리스트 뷰
-- CRUD 기능 (추가/수정/삭제)
+### 3. 콘서트 트래킹 (v2)
+- **기본 관리**: 제목, 아티스트, 날짜, 장소, 도시, 메모, 상태(예정/확정/관람완료/취소)
+- **공연 일시(ShowTimes)**: 복수 공연일 지원 (날짜, 시간, 장소, 도시)
+- **티켓 마일스톤 타임라인**: FC선행, 공식선행, 일반발매, 입금기한, 발권, 개장/개연 등 11종
+  - 상태 관리: planned → done / missed / cancelled
+  - 세로 타임라인 UI, 클릭으로 상태 토글
+  - 기한 지남 경고 표시
+- **일본어 공지 Import**: 텍스트 붙여넣기 또는 URL 입력 → 자동 파싱
+  - 키워드 기반 마일스톤 추출 (FC先行, 抽選, 当落発表, 一般発売 등)
+  - 일본어 날짜 정규식 파싱 (2026年3月5日, 3/5 23:59 등)
+  - 장소/도시/티켓 가격 자동 인식
+  - 트윗 URL은 oEmbed API로 텍스트 추출
+- **출처 추적**: tweet, fanclub, ticket, promoter, news, manual
+- 캘린더 뷰 + 리스트 뷰 + 상세 페이지
+- 대시보드 마감 연동
 
-### 3. 이민/취업 체크리스트
+### 4. 이민/취업 체크리스트
 - **5개 카테고리**: 출국 전(✈️), 입국 후(🛬), 생활 세팅(🏠), 직장(💼), 금융(💰)
 - **우선순위**: 높음/중간/낮음 (색상 구분)
 - 실시간 완료율 표시
 - 50+ 기본 항목 + 커스텀 항목 추가
 
-### 4. 재정 도구
+### 5. 재정 도구
 - **급여 계산기**: 일본 소득세/주민세/사회보험료 자동 계산 (2025-2026 세율)
 - **예산 플래너**: 3개 생활 시기별 예산 관리
   - 4~7월 (연수기): ¥220,000/월
   - 8~12월 (본배치): ¥220,000/월
   - 2년차~: ¥190,000/월
 - **환율 계산기**: KRW ↔ JPY 양방향 변환
+- **지출 추적**: Google Sheets 연동, 월별 카테고리별 집계
 
-### 5. 생활 가이드
+### 6. 노래방 곡 검색
+- TJ/금영 노래방 번호 검색 (manana.kr API)
+- 곡 제목/아티스트 검색
+- TJ, 금영 번호 동시 표시
+
+### 7. 주간 기록
+- 주차별 기록 관리
+- **4개 섹션**: 기술(technical), 표현(expression), 실수(mistake), 메모(memo)
+- CRUD 지원
+
+### 8. 생활 가이드
 - 출국 전 재정 준비, 이주 로드맵 (4단계)
 - 절세 전략 (부양공제, 후루사토 노제이)
 - Honda 근무 관련 정보
 - 쓰레기 분리수거 규칙 등
 
-### 6. 활동 지도
-- Google Maps 다크 테마 커스텀 지도
-- **카테고리별 마커**: 맛집(🍜), 관광(⛩️), 쇼핑(🛍️), 생활(🏪), 직장(💼), 기타(📌)
-- **지역**: 요코하마(연수), 도치기(본배치)
-- 클릭으로 장소 추가, 메모 및 날짜 기록
-
-### 7. 일본어 노트 & 빠른 링크
+### 9. 일본어 노트 & 빠른 링크
 - 일본어 텍스트 + 후리가나 + 한국어 번역
 - 카테고리: 비즈니스, Honda 용어, 일상, 기타
 - 필수 링크 모음 (은행, 결제, 쇼핑, 교통, 세금)
@@ -159,20 +216,47 @@ japan-life/
 
 ## API 라우트
 
-| 엔드포인트 | 메서드 | 설명 |
-|------------|--------|------|
-| `/api/search` | GET | iTunes 아티스트 검색 |
-| `/api/releases` | GET | 즐겨찾기 아티스트 최신 트랙 |
-| `/api/news` | GET | 콘서트 뉴스 (번역 포함) |
-| `/api/checklist` | GET, POST, PATCH, DELETE | 체크리스트 항목 관리 |
-| `/api/budget` | GET, POST | 예산 데이터 관리 |
-| `/api/notes` | GET, POST, PATCH, DELETE | 일본어 노트 관리 |
-| `/api/spots` | GET, POST, DELETE | 지도 스팟 관리 |
-| `/api/favorites` | GET, POST, DELETE | 즐겨찾기 아티스트 관리 |
-| `/api/links` | GET, POST, DELETE | 빠른 링크 관리 |
-| `/api/user-concerts` | GET, POST, PATCH, DELETE | 개인 콘서트 일정 관리 |
+| 엔드포인트 | 메서드 | 설명 | 캐싱 |
+|------------|--------|------|------|
+| `/api/search` | GET | iTunes 아티스트 검색 + Deezer 사진 | - |
+| `/api/releases` | GET | 즐겨찾기 아티스트 최신 트랙 | - |
+| `/api/top-artists` | GET | Apple Music 일본 차트 Top 100 | 1시간 |
+| `/api/news` | GET | 콘서트 뉴스 (번역 포함) | - |
+| `/api/exchange-rates` | GET | 멀티 환율 (Wise → 폴백) | 10분 |
+| `/api/exchange-rate` | GET | 단순 JPY→KRW 환율 | - |
+| `/api/sheets` | GET | Google Sheets 지출 데이터 | - |
+| `/api/karaoke` | GET | TJ/금영 노래방 곡 검색 | - |
+| `/api/checklist` | GET, POST, PATCH, DELETE | 체크리스트 항목 관리 | - |
+| `/api/budget` | GET, POST | 예산 데이터 관리 | - |
+| `/api/notes` | GET, POST, PATCH, DELETE | 일본어 노트 관리 | - |
+| `/api/favorites` | GET, POST, DELETE | 즐겨찾기 아티스트 관리 | - |
+| `/api/links` | GET, POST, DELETE | 빠른 링크 관리 | - |
+| `/api/logs` | GET, POST, PATCH, DELETE | 주간 기록 관리 | - |
+| `/api/user-concerts` | GET, POST, PATCH, DELETE | 콘서트 관리 (Zod 검증) | - |
+| `/api/user-concerts/import` | POST | 텍스트/URL → 콘서트 파싱 | - |
 
-모든 API는 JSON 요청/응답, 파일 기반 영속성, try-catch 에러 처리를 지원합니다.
+---
+
+## SWR 커스텀 훅 (`lib/hooks/use-api.ts`)
+
+| 훅 | 용도 |
+|----|------|
+| `useChecklist()` | 체크리스트 항목 |
+| `useConcerts()` | 콘서트 목록 |
+| `useNotes()` | 일본어 노트 |
+| `useBudget()` | 예산 데이터 |
+| `useFavorites()` | 즐겨찾기 아티스트 |
+| `useLinks()` | 빠른 링크 |
+| `useLogs()` | 주간 기록 |
+| `useReleases()` | 최신 릴리스 |
+| `useTopSongs()` | Apple Music 차트 |
+| `useLiveExchangeRates()` | 실시간 환율 |
+| `useSheetsSummary()` | Google Sheets 지출 |
+| `useKaraokeSearch(query)` | 노래방 검색 |
+| `useSearch(query)` | 아티스트 검색 |
+| `mutateAPI(url, method, body)` | 범용 뮤테이션 유틸 |
+
+모든 SWR 훅은 `revalidateOnFocus: false` 설정으로 불필요한 리패칭을 방지합니다.
 
 ---
 
@@ -181,55 +265,153 @@ japan-life/
 ### 정적 데이터 (읽기 전용)
 | 파일 | 설명 |
 |------|------|
-| `data/artists.json` | 피처드 아티스트 3명 |
-| `data/concerts.json` | 샘플 콘서트 10건 |
+| `data/artists.json` | 피처드 아티스트 |
+| `data/concerts.json` | 샘플 콘서트 데이터 |
 | `data/guide-content.json` | 생활 가이드 (5 섹션) |
 | `data/checklist-defaults.json` | 기본 체크리스트 50+ 항목 |
 
 ### 사용자 데이터 (읽기/쓰기, Docker 볼륨으로 영속)
-| 파일 | 설명 |
+| 파일 | 스키마 버전 | 설명 |
+|------|-------------|------|
+| `data/user/favorites.json` | 1 | 즐겨찾기 아티스트 |
+| `data/user/checklist.json` | 1 | 체크리스트 진행 상태 |
+| `data/user/notes.json` | 1 | 일본어 노트 |
+| `data/user/budget.json` | 1 | 예산/지출 데이터 |
+| `data/user/links.json` | 1 | 커스텀 링크 |
+| `data/user/logs.json` | 1 | 주간 기록 |
+| `data/user/user-concerts.json` | **2** | 콘서트 일정 (v2: 마일스톤, 출처, 공연일시) |
+
+---
+
+## 저장소 시스템 (`lib/store.ts`)
+
+파일 기반 JSON 저장소로 외부 DB 없이 데이터를 관리합니다.
+
+### 주요 특징
+- **원자적 쓰기**: 임시 파일(`*.tmp`) 작성 후 `rename()`으로 교체 → 손상 방지
+- **자동 백업**: 쓰기 시 `.backup-{n}` 파일 자동 생성 (최대 7개 순환)
+- **스키마 버전 관리**: `STORE_VERSIONS` 상수로 각 스토어의 버전 관리
+- **자동 마이그레이션**: 읽기 시 버전 불일치 감지 → 마이그레이션 함수 실행
+
+### 마이그레이션 예시 (user-concerts v1→v2)
+기존 레코드에 `artist`, `status`, `showTimes[]`, `milestones[]`, `sources[]`, `createdAt`, `updatedAt`, `version` 필드 자동 추가. 배열 스토어는 `__version` 태그가 불가하므로 첫 항목의 `showTimes` 존재 여부로 멱등성 판별.
+
+---
+
+## 유효성 검증 (`lib/validations.ts`)
+
+Zod 4를 사용한 런타임 유효성 검증. API 라우트에서 요청 body를 검증합니다.
+
+### 주요 스키마
+- `userConcertSchema` - 콘서트 생성 (POST)
+- `userConcertPatchSchema` - 콘서트 수정 (PATCH)
+- `showTimeSchema` - 공연 일시
+- `ticketMilestoneSchema` - 티켓 마일스톤 (11종 타입)
+- `concertSourceSchema` - 출처 정보
+- `idSchema` - 삭제용 ID 검증
+
+### 패턴
+```ts
+const { ok, data, error } = parseOrError(schema, body);
+if (!ok) return NextResponse.json({ error }, { status: 400 });
+```
+
+---
+
+## 콘서트 파서 (`lib/concertParser.ts`)
+
+일본어 콘서트 공지 텍스트를 구조화된 데이터로 변환하는 정규식 기반 파서입니다.
+
+### 추출 항목
+| 항목 | 감지 방법 |
+|------|-----------|
+| **마일스톤** | FC先行, 抽選, 当落発表, 一般発売, 入金期間, 発券, 開場, 開演 등 15+ 키워드 |
+| **날짜** | `2026年3月5日(木)`, `2026/3/5`, `3/5 23:59` 등 일본어 날짜 형식 |
+| **날짜 범위** | `〜`, `～`, `~` 구분자로 시작/종료 마일스톤 분리 |
+| **장소** | ホール, ドーム, アリーナ, 武道館 등 접미어 패턴 |
+| **도시** | 29개 주요 일본 도시 사전 |
+| **티켓 가격** | `[\d,]+円`, `¥[\d,]+` 패턴 |
+| **제목** | 텍스트 첫 줄 (30자 이하) |
+
+---
+
+## 콘서트 데이터 모델 (`lib/userConcerts.ts`)
+
+### UserConcert (v2)
+```
+id, title, artist, date, venue, city, memo
+status: planned | confirmed | attended | cancelled
+ticketPrice?, ticketUrl?
+showTimes: ShowTime[]          # 복수 공연일
+milestones: TicketMilestone[]  # 티켓 추적 타임라인
+sources: ConcertSource[]       # 정보 출처
+createdAt, updatedAt, version
+```
+
+### TicketMilestone
+```
+id, type, label, date, time?, status, memo?
+```
+**type 종류** (11종):
+`FC_LOTTERY_OPEN`, `FC_LOTTERY_CLOSE`, `FC_RESULT`,
+`OFFICIAL_LOTTERY_OPEN`, `OFFICIAL_LOTTERY_CLOSE`, `OFFICIAL_RESULT`,
+`GENERAL_SALE_OPEN`, `PAYMENT_DEADLINE`, `TICKET_ISSUE_OPEN`,
+`SHOW_DOOR_OPEN`, `SHOW_START`
+
+**status**: `planned` → `done` | `missed` | `cancelled`
+
+---
+
+## 공통 타입 (`lib/types.ts`)
+
+| 타입 | 용도 |
 |------|------|
-| `data/user/favorites.json` | 즐겨찾기 아티스트 |
-| `data/user/checklist.json` | 체크리스트 진행 상태 |
-| `data/user/notes.json` | 일본어 노트 |
-| `data/user/spots.json` | 지도 위치 |
-| `data/user/budget.json` | 예산/지출 데이터 |
-| `data/user/links.json` | 커스텀 링크 |
-| `data/user/user-concerts.json` | 개인 콘서트 일정 |
+| `Artist` | 아티스트 (name, genre, image, slug 등) |
+| `Concert` | 정적 콘서트 데이터 |
+| `ITunesTrack` | iTunes 검색 결과 |
+| `ChecklistItem` | 체크리스트 항목 (category, priority, completed) |
+| `SalaryBreakdown` | 급여 상세 내역 |
+| `BudgetCategory` | 예산 카테고리 |
+| `SheetsSummary` | Google Sheets 지출 요약 |
+| `Note` | 일본어 노트 (japanese, furigana, korean, category) |
+| `QuickLink` | 빠른 링크 |
+| `WeeklyLog` | 주간 기록 (week, technical, expression, mistake, memo) |
+| `KaraokeSong` | 노래방 곡 (title, artist, tj, kumyoung) |
 
 ---
 
 ## 아키텍처 다이어그램
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client (Browser)                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
-│  │Dashboard │ │ Artists  │ │Calculator│ │Checklist │  ...   │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘       │
-│       └─────────────┴────────────┴────────────┘             │
-│                         │ SWR                               │
-│                    ┌────┴────┐                               │
-│                    │  Hooks  │  (use-api.ts)                 │
-│                    └────┬────┘                               │
-└─────────────────────────┼───────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        Client (Browser / PWA)                     │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │Dashboard │ │ Concerts │ │Calculator│ │ Karaoke  │   ...      │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘            │
+│       └─────────────┴────────────┴────────────┘                  │
+│                         │ SWR (13 hooks)                         │
+│                    ┌────┴────┐                                    │
+│                    │  Hooks  │  (use-api.ts + mutateAPI)          │
+│                    └────┬────┘                                    │
+└─────────────────────────┼────────────────────────────────────────┘
                           │ HTTP (fetch)
-┌─────────────────────────┼───────────────────────────────────┐
-│                   Next.js Server                            │
-│                    ┌────┴────┐                               │
-│                    │API Route│  (/api/*)                     │
-│                    └────┬────┘                               │
-│            ┌────────────┼────────────┐                       │
-│       ┌────┴────┐  ┌────┴────┐  ┌───┴────┐                  │
-│       │store.ts │  │itunes.ts│  │External │                  │
-│       │(JSON IO)│  │(iTunes) │  │  APIs   │                  │
-│       └────┬────┘  └─────────┘  └────────┘                  │
-│            │                                                │
-│    ┌───────┴───────┐                                        │
-│    │ /app/data/user │  (Docker Volume)                      │
-│    │  *.json files  │                                       │
-│    └───────────────┘                                        │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────┼────────────────────────────────────────┐
+│                   Next.js Server (standalone)                     │
+│                    ┌────┴────┐                                    │
+│                    │API Route│  (/api/* — 16 endpoints)           │
+│                    └────┬────┘                                    │
+│          ┌──────────────┼──────────────┐                         │
+│     ┌────┴────┐   ┌─────┴─────┐   ┌───┴──────┐                  │
+│     │store.ts │   │validations│   │ External │                   │
+│     │(JSON IO)│   │  (Zod 4)  │   │   APIs   │                  │
+│     └────┬────┘   └───────────┘   └──────────┘                  │
+│          │                         iTunes, Deezer,               │
+│  ┌───────┴───────┐                 Wise, Apple Music,            │
+│  │ /app/data/user │                Google Sheets,                │
+│  │  *.json files  │  (Docker Vol)  Twitter oEmbed,               │
+│  │  + .backup-*   │               manana.kr, er-api              │
+│  └───────────────┘                                               │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -247,7 +429,7 @@ japan-life/
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
 | `DATA_DIR` | 사용자 데이터 저장 경로 | `/app/data/user` |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps API 키 | - |
+| `GOOGLE_SHEETS_API_KEY` | Google Sheets API 키 | - |
 | `NODE_ENV` | 실행 환경 | `production` |
 | `PORT` | 서버 포트 | `3000` |
 
@@ -292,9 +474,13 @@ docker compose -f docker-compose.nas.yml up -d
 
 ## 주요 기술적 특징
 
-1. **PWA 지원**: 서비스 워커 등록, manifest.json, 오프라인 프레임워크
-2. **타입 안전성**: TypeScript strict 모드, 전체 타입 정의
+1. **PWA 지원**: 서비스 워커 등록, manifest.json, 오프라인 페이지
+2. **타입 안전성**: TypeScript strict 모드 + Zod 런타임 검증
 3. **성능 최적화**: Next.js standalone 출력, SWR 캐싱, 검색 디바운싱 (400ms)
-4. **반응형 디자인**: 모바일 우선 Tailwind CSS, 그리드 브레이크포인트
-5. **다크 테마**: 전체 앱 다크 모드 UI
-6. **경량 저장소**: 외부 DB 없이 파일 기반 JSON 영속성
+4. **스키마 버전 관리**: 파일 기반 저장소에 버전 + 자동 마이그레이션
+5. **원자적 파일 쓰기**: tmp 파일 + rename 패턴으로 데이터 손상 방지
+6. **자동 백업**: 최대 7개 순환 백업 파일 유지
+7. **반응형 디자인**: 모바일 우선 Tailwind CSS, 그리드 브레이크포인트
+8. **다크 테마**: 전체 앱 다크 모드 UI
+9. **일본어 텍스트 파싱**: 정규식 기반 콘서트 공지 자동 분석
+10. **경량 저장소**: 외부 DB 없이 파일 기반 JSON 영속성

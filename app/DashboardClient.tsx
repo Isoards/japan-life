@@ -124,7 +124,7 @@ export default function DashboardClient() {
               alt="Japan Life"
               width={400}
               height={100}
-              className="relative mx-auto h-20 sm:h-24 w-auto drop-shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+              className="relative mx-auto h-28 sm:h-50 w-auto drop-shadow-[0_0_20px_rgba(168,85,247,0.15)]"
               priority
             />
           </div>
@@ -274,21 +274,34 @@ export default function DashboardClient() {
           <div className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/10 via-transparent to-amber-500/10 p-4 hover:border-rose-500/30 transition-all">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">📋</span>
-              <span className="text-sm font-medium text-gray-400">이번 주 마감</span>
-              <span className="ml-auto text-xs text-rose-400">{upcomingMilestones.length}건</span>
+              <span className="text-sm font-medium text-gray-400">
+                이번 주 마감
+              </span>
+              <span className="ml-auto text-xs text-rose-400">
+                {upcomingMilestones.length}건
+              </span>
             </div>
             <div className="space-y-2">
               {upcomingMilestones.slice(0, 3).map((ms) => (
-                <div key={ms.id} className="flex items-center justify-between gap-2">
+                <div
+                  key={ms.id}
+                  className="flex items-center justify-between gap-2"
+                >
                   <div className="min-w-0">
                     <p className="text-sm text-white truncate">{ms.label}</p>
-                    <p className="text-xs text-gray-500 truncate">{ms.concertTitle}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {ms.concertTitle}
+                    </p>
                   </div>
-                  <span className="text-xs text-amber-400 font-mono shrink-0">{ms.date.slice(5)}</span>
+                  <span className="text-xs text-amber-400 font-mono shrink-0">
+                    {ms.date.slice(5)}
+                  </span>
                 </div>
               ))}
               {upcomingMilestones.length > 3 && (
-                <p className="text-xs text-gray-500">+{upcomingMilestones.length - 3}건 더</p>
+                <p className="text-xs text-gray-500">
+                  +{upcomingMilestones.length - 3}건 더
+                </p>
               )}
             </div>
           </div>
