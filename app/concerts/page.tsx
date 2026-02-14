@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 const Calendar = dynamic(() => import("react-calendar"), {
   ssr: false,
@@ -11,6 +12,7 @@ const Calendar = dynamic(() => import("react-calendar"), {
 });
 import "react-calendar/dist/Calendar.css";
 import { UserConcert } from "@/lib/userConcerts";
+import { getNextMilestone } from "@/lib/milestoneUtils";
 import { useConcerts, mutateAPI } from "@/lib/hooks/use-api";
 import { useToast } from "@/components/Toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -26,33 +28,45 @@ export default function ConcertsPage() {
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
+  const [formArtist, setFormArtist] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formVenue, setFormVenue] = useState("");
   const [formCity, setFormCity] = useState("");
   const [formMemo, setFormMemo] = useState("");
 
-  const concertDates = useMemo(
-    () => new Set(concerts.map((c) => new Date(c.date).toDateString())),
-    [concerts]
-  );
+  const concertDates = useMemo(() => {
+    const dates = new Set<string>();
+    for (const c of concerts) {
+      dates.add(new Date(c.date).toDateString());
+      for (const st of c.showTimes ?? []) {
+        dates.add(new Date(st.date).toDateString());
+      }
+    }
+    return dates;
+  }, [concerts]);
 
   const selectedConcerts = useMemo(() => {
     if (!selectedDate) return [];
-    return concerts.filter(
-      (c) => new Date(c.date).toDateString() === selectedDate.toDateString()
-    );
+    const dateStr = selectedDate.toDateString();
+    return concerts.filter((c) => {
+      if (new Date(c.date).toDateString() === dateStr) return true;
+      return (c.showTimes ?? []).some(
+        (st) => new Date(st.date).toDateString() === dateStr,
+      );
+    });
   }, [concerts, selectedDate]);
 
   const sortedConcerts = useMemo(
     () =>
       [...concerts].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       ),
-    [concerts]
+    [concerts],
   );
 
   const resetForm = () => {
     setFormTitle("");
+    setFormArtist("");
     setFormDate("");
     setFormVenue("");
     setFormCity("");
@@ -69,6 +83,7 @@ export default function ConcertsPage() {
   const startEdit = (concert: UserConcert) => {
     setEditingId(concert.id);
     setFormTitle(concert.title);
+    setFormArtist(concert.artist ?? "");
     setFormDate(concert.date);
     setFormVenue(concert.venue);
     setFormCity(concert.city);
@@ -82,6 +97,7 @@ export default function ConcertsPage() {
 
     const body = {
       title: formTitle.trim(),
+      artist: formArtist.trim(),
       date: formDate,
       venue: formVenue.trim(),
       city: formCity.trim(),
@@ -89,10 +105,17 @@ export default function ConcertsPage() {
     };
 
     const res = editingId
-      ? await mutateAPI("/api/user-concerts", "PATCH", { id: editingId, ...body })
+      ? await mutateAPI("/api/user-concerts", "PATCH", {
+          id: editingId,
+          ...body,
+        })
       : await mutateAPI("/api/user-concerts", "POST", body);
 
-    if (res.ok) { toast(editingId ? "일정을 수정했습니다" : "일정을 추가했습니다"); } else { toast(res.error, "error"); }
+    if (res.ok) {
+      toast(editingId ? "일정을 수정했습니다" : "일정을 추가했습니다");
+    } else {
+      toast(res.error, "error");
+    }
     mutate();
     setShowForm(false);
     resetForm();
@@ -100,8 +123,14 @@ export default function ConcertsPage() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const res = await mutateAPI("/api/user-concerts", "DELETE", { id: deleteTarget });
-    if (res.ok) { toast("일정을 삭제했습니다"); } else { toast(res.error, "error"); }
+    const res = await mutateAPI("/api/user-concerts", "DELETE", {
+      id: deleteTarget,
+    });
+    if (res.ok) {
+      toast("일정을 삭제했습니다");
+    } else {
+      toast(res.error, "error");
+    }
     mutate();
     setDeleteTarget(null);
   };
@@ -121,7 +150,12 @@ export default function ConcertsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <div className="text-red-400">데이터를 불러오지 못했습니다</div>
-        <button onClick={() => mutate()} className="px-4 py-2 rounded-lg text-sm bg-white/10 text-white hover:bg-white/15 transition-colors">다시 시도</button>
+        <button
+          onClick={() => mutate()}
+          className="px-4 py-2 rounded-lg text-sm bg-white/10 text-white hover:bg-white/15 transition-colors"
+        >
+          다시 시도
+        </button>
       </div>
     );
   }
@@ -139,6 +173,12 @@ export default function ConcertsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white">내 콘서트</h1>
         <div className="flex gap-2 items-center">
+          <Link
+            href="/concerts/import"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+          >
+            가져오기
+          </Link>
           <button
             onClick={() => openForm()}
             className="px-4 py-2 text-sm font-medium rounded-lg bg-pink-500/20 text-pink-300 border border-pink-500/30 hover:bg-pink-500/30 transition-colors cursor-pointer"
@@ -191,6 +231,19 @@ export default function ConcertsPage() {
                 onChange={(e) => setFormTitle(e.target.value)}
                 placeholder="예: YOASOBI ARENA TOUR 2026"
                 required
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                아티스트
+              </label>
+              <input
+                type="text"
+                value={formArtist}
+                onChange={(e) => setFormArtist(e.target.value)}
+                placeholder="예: YOASOBI"
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
               />
             </div>
@@ -291,7 +344,7 @@ export default function ConcertsPage() {
                     const yyyy = selectedDate.getFullYear();
                     const mm = String(selectedDate.getMonth() + 1).padStart(
                       2,
-                      "0"
+                      "0",
                     );
                     const dd = String(selectedDate.getDate()).padStart(2, "0");
                     openForm(`${yyyy}-${mm}-${dd}`);
@@ -324,83 +377,99 @@ export default function ConcertsPage() {
       {view === "list" && (
         <div className="space-y-3">
           {sortedConcerts.length > 0 ? (
-            sortedConcerts.map((concert) => (
-              <div
-                key={concert.id}
-                className="flex items-start gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5 group"
-              >
-                <div className="text-center min-w-[60px]">
-                  <div className="text-2xl font-bold text-pink-400">
-                    {new Date(concert.date).getDate()}
+            sortedConcerts.map((concert) => {
+              const nextMs = getNextMilestone(concert);
+              return (
+                <div
+                  key={concert.id}
+                  className="flex items-start gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5 group"
+                >
+                  <div className="text-center min-w-[60px]">
+                    <div className="text-2xl font-bold text-pink-400">
+                      {new Date(concert.date).getDate()}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(concert.date).toLocaleString("ko", {
+                        month: "short",
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(concert.date).getFullYear()}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    {new Date(concert.date).toLocaleString("ko", {
-                      month: "short",
-                    })}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(concert.date).getFullYear()}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-white truncate">
-                    {concert.title}
-                  </h4>
-                  {(concert.venue || concert.city) && (
-                    <p className="text-sm text-gray-400 mt-1">
-                      {[concert.venue, concert.city]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                  {concert.memo && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {concert.memo}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => startEdit(concert)}
-                    className="text-gray-600 hover:text-purple-400 transition-colors cursor-pointer p-1"
-                    title="수정"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/concerts/${concert.id}`}
+                      className="font-semibold text-white truncate block hover:text-pink-400 transition-colors"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(concert.id)}
-                    className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
-                    title="삭제"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      {concert.title}
+                    </Link>
+                    {concert.artist && (
+                      <p className="text-sm text-purple-400 mt-0.5">
+                        {concert.artist}
+                      </p>
+                    )}
+                    {(concert.venue || concert.city) && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        {[concert.venue, concert.city]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                    {nextMs && (
+                      <p className="text-xs text-amber-400 mt-1">
+                        {nextMs.label} · {nextMs.date}
+                      </p>
+                    )}
+                    {concert.memo && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {concert.memo}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => startEdit(concert)}
+                      className="text-gray-600 hover:text-purple-400 transition-colors cursor-pointer p-1"
+                      title="수정"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(concert.id)}
+                      className="text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-1"
+                      title="삭제"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-12 rounded-xl border border-dashed border-white/10">
               <p className="text-gray-300 text-lg mb-2">
@@ -432,14 +501,28 @@ function ConcertCard({
   onEdit: (concert: UserConcert) => void;
   onDelete: (id: string) => void;
 }) {
+  const nextMs = getNextMilestone(concert);
   return (
     <div className="p-4 rounded-lg bg-white/5 border border-white/10 group">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h4 className="font-semibold text-white">{concert.title}</h4>
+        <div className="min-w-0">
+          <Link
+            href={`/concerts/${concert.id}`}
+            className="font-semibold text-white hover:text-pink-400 transition-colors"
+          >
+            {concert.title}
+          </Link>
+          {concert.artist && (
+            <p className="text-sm text-purple-400 mt-0.5">{concert.artist}</p>
+          )}
           {(concert.venue || concert.city) && (
             <p className="text-sm text-gray-400 mt-1">
               {[concert.venue, concert.city].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {nextMs && (
+            <p className="text-xs text-amber-400 mt-1">
+              {nextMs.label} · {nextMs.date}
             </p>
           )}
           {concert.memo && (

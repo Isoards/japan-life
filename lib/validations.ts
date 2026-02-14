@@ -57,16 +57,60 @@ export const linkPatchSchema = linkSchema.extend({
 
 // ── User Concerts ──
 
-export const userConcertSchema = z.object({
-  title: z.string().min(1),
-  artist: z.string().min(1),
+export const showTimeSchema = z.object({
   date: z.string().min(1),
+  time: z.string().optional(),
   venue: z.string().optional(),
   city: z.string().optional(),
+});
+
+export const concertSourceSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["tweet", "fanclub", "ticket", "promoter", "news", "manual"]),
+  url: z.string().optional(),
+  text: z.string().optional(),
+  addedAt: z.string().min(1),
+});
+
+export const ticketMilestoneSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum([
+    "FC_LOTTERY_OPEN",
+    "FC_LOTTERY_CLOSE",
+    "FC_RESULT",
+    "OFFICIAL_LOTTERY_OPEN",
+    "OFFICIAL_LOTTERY_CLOSE",
+    "OFFICIAL_RESULT",
+    "GENERAL_SALE_OPEN",
+    "PAYMENT_DEADLINE",
+    "TICKET_ISSUE_OPEN",
+    "SHOW_DOOR_OPEN",
+    "SHOW_START",
+  ]),
+  label: z.string().min(1),
+  date: z.string().min(1),
+  time: z.string().optional(),
+  status: z.enum(["planned", "done", "missed", "cancelled"]),
+  memo: z.string().optional(),
+});
+
+export const userConcertSchema = z.object({
+  title: z.string().min(1),
+  artist: z.string().optional().default(""),
+  date: z.string().min(1),
+  venue: z.string().optional().default(""),
+  city: z.string().optional().default(""),
+  memo: z.string().optional().default(""),
+  status: z.enum(["planned", "confirmed", "attended", "cancelled"]).optional().default("planned"),
   ticketPrice: z.number().optional(),
   ticketUrl: z.string().optional(),
-  memo: z.string().optional(),
-  status: z.enum(["planned", "confirmed", "attended", "cancelled"]).optional(),
+  showTimes: z.array(showTimeSchema).optional().default([]),
+  milestones: z.array(ticketMilestoneSchema).optional().default([]),
+  sources: z.array(concertSourceSchema).optional().default([]),
+});
+
+export const userConcertPatchSchema = userConcertSchema.partial().extend({
+  id: z.string().min(1),
 });
 
 // ── Weekly Logs ──

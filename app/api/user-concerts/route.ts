@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
-
-interface UserConcert {
-  id: string;
-  title: string;
-  date: string;
-  venue: string;
-  city: string;
-  memo: string;
-}
+import type { UserConcert } from "@/lib/userConcerts";
+import { userConcertSchema, userConcertPatchSchema, idSchema, parseOrError } from "@/lib/validations";
 
 const STORE_NAME = "user-concerts";
+
+async function safeSave(data: UserConcert[]): Promise<void> {
+  try {
+    await writeStore(STORE_NAME, data);
+  } catch {
+    // permission denied — silently fail
+  }
+}
 
 export async function GET() {
   const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
@@ -18,38 +19,57 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body: Omit<UserConcert, "id"> = await request.json();
-  const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
+  const body = await request.json();
+  const parsed = parseOrError(userConcertSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
+  const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
+  const now = new Date().toISOString();
   const newConcert: UserConcert = {
-    ...body,
     id: `uc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: parsed.data.title,
+    artist: parsed.data.artist ?? "",
+    date: parsed.data.date,
+    venue: parsed.data.venue ?? "",
+    city: parsed.data.city ?? "",
+    memo: parsed.data.memo ?? "",
+    status: parsed.data.status ?? "planned",
+    ticketPrice: parsed.data.ticketPrice,
+    ticketUrl: parsed.data.ticketUrl,
+    showTimes: parsed.data.showTimes ?? [],
+    milestones: parsed.data.milestones ?? [],
+    sources: parsed.data.sources ?? [],
+    createdAt: now,
+    updatedAt: now,
+    version: 2,
   };
   concerts.push(newConcert);
-  await writeStore(STORE_NAME, concerts);
-
+  await safeSave(concerts);
   return NextResponse.json(newConcert);
 }
 
 export async function PATCH(request: NextRequest) {
-  const { id, ...updates } = await request.json();
+  const body = await request.json();
+  const parsed = parseOrError(userConcertPatchSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
-  const concert = concerts.find((c) => c.id === id);
-  if (concert) {
-    if (updates.title !== undefined) concert.title = updates.title;
-    if (updates.date !== undefined) concert.date = updates.date;
-    if (updates.venue !== undefined) concert.venue = updates.venue;
-    if (updates.city !== undefined) concert.city = updates.city;
-    if (updates.memo !== undefined) concert.memo = updates.memo;
-    await writeStore(STORE_NAME, concerts);
-  }
+  const concert = concerts.find((c) => c.id === parsed.data.id);
+  if (!concert) return NextResponse.json({ error: "콘서트를 찾을 수 없습니다" }, { status: 404 });
+
+  const { id: _id, ...updates } = parsed.data;
+  Object.assign(concert, updates, { updatedAt: new Date().toISOString() });
+  await safeSave(concerts);
   return NextResponse.json(concerts);
 }
 
 export async function DELETE(request: NextRequest) {
-  const { id } = await request.json();
+  const body = await request.json();
+  const parsed = parseOrError(idSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
   const concerts = await readStore<UserConcert[]>(STORE_NAME, []);
-  const updated = concerts.filter((c) => c.id !== id);
-  await writeStore(STORE_NAME, updated);
+  const updated = concerts.filter((c) => c.id !== parsed.data.id);
+  await safeSave(updated);
   return NextResponse.json(updated);
 }

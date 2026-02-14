@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getHighResArtwork, formatDuration } from "@/lib/itunes";
+import { getUpcomingMilestones } from "@/lib/milestoneUtils";
 import MusicButton from "@/components/MusicButton";
 import FavoriteButton from "@/components/FavoriteButton";
 import {
@@ -105,6 +106,11 @@ export default function DashboardClient() {
       budgetRemaining: total - spent,
     };
   }, [budget, currentMonthSheet]);
+
+  const upcomingMilestones = useMemo(
+    () => getUpcomingMilestones(concerts, 7),
+    [concerts],
+  );
 
   return (
     <div className="space-y-10">
@@ -261,6 +267,33 @@ export default function DashboardClient() {
           </div>
         </Link>
       </div>
+
+      {/* 이번 주 마감 카드 */}
+      {upcomingMilestones.length > 0 && (
+        <Link href="/concerts">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/10 via-transparent to-amber-500/10 p-4 hover:border-rose-500/30 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">📋</span>
+              <span className="text-sm font-medium text-gray-400">이번 주 마감</span>
+              <span className="ml-auto text-xs text-rose-400">{upcomingMilestones.length}건</span>
+            </div>
+            <div className="space-y-2">
+              {upcomingMilestones.slice(0, 3).map((ms) => (
+                <div key={ms.id} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white truncate">{ms.label}</p>
+                    <p className="text-xs text-gray-500 truncate">{ms.concertTitle}</p>
+                  </div>
+                  <span className="text-xs text-amber-400 font-mono shrink-0">{ms.date.slice(5)}</span>
+                </div>
+              ))}
+              {upcomingMilestones.length > 3 && (
+                <p className="text-xs text-gray-500">+{upcomingMilestones.length - 3}건 더</p>
+              )}
+            </div>
+          </div>
+        </Link>
+      )}
 
       <div className="max-w-2xl mx-auto">
         <div className="relative">

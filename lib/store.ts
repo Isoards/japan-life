@@ -17,7 +17,7 @@ const STORE_VERSIONS: Record<string, number> = {
   notes: 1,
   favorites: 1,
   links: 1,
-  "user-concerts": 1,
+  "user-concerts": 2,
   logs: 1,
 };
 
@@ -26,6 +26,26 @@ const STORE_VERSIONS: Record<string, number> = {
  * 예: budget v1 → v2: sheetCategories 필드 보장
  */
 const MIGRATIONS: Record<string, Record<number, Migration>> = {
+  "user-concerts": {
+    1: (data: unknown) => {
+      if (!Array.isArray(data)) return data;
+      if (data.length > 0 && (data[0] as Record<string, unknown>).showTimes !== undefined) {
+        return data; // already migrated
+      }
+      const now = new Date().toISOString();
+      return data.map((c: Record<string, unknown>) => ({
+        ...c,
+        artist: c.artist ?? "",
+        status: c.status ?? "planned",
+        showTimes: [],
+        milestones: [],
+        sources: [],
+        createdAt: c.createdAt ?? now,
+        updatedAt: c.updatedAt ?? now,
+        version: 2,
+      }));
+    },
+  },
   budget: {
     1: (data: unknown) => {
       const d = data as Record<string, unknown>;
