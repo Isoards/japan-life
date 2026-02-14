@@ -12,10 +12,14 @@ export async function GET() {
     const defaults: BudgetData = {
       income: 0,
       categories: getDefaultBudget(),
+      sinkingFunds: [],
     };
     return NextResponse.json(defaults);
   }
-  return NextResponse.json(data);
+  return NextResponse.json({
+    ...data,
+    sinkingFunds: data.sinkingFunds ?? [],
+  });
 }
 
 export async function POST(request: NextRequest) {

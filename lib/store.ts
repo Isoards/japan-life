@@ -12,7 +12,7 @@ type Migration = (data: unknown) => unknown;
 
 /** 스토어별 현재 버전 & 마이그레이션 맵 */
 const STORE_VERSIONS: Record<string, number> = {
-  budget: 2,
+  budget: 3,
   checklist: 1,
   notes: 1,
   favorites: 1,
@@ -56,6 +56,11 @@ const MIGRATIONS: Record<string, Record<number, Migration>> = {
           sheetCategories: cat.sheetCategories ?? [],
         }));
       }
+      return d;
+    },
+    2: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      d.sinkingFunds = Array.isArray(d.sinkingFunds) ? d.sinkingFunds : [];
       return d;
     },
   },

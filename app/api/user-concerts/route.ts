@@ -57,7 +57,8 @@ export async function PATCH(request: NextRequest) {
   const concert = concerts.find((c) => c.id === parsed.data.id);
   if (!concert) return NextResponse.json({ error: "콘서트를 찾을 수 없습니다" }, { status: 404 });
 
-  const { id: _id, ...updates } = parsed.data;
+  const { id, ...updates } = parsed.data;
+  void id;
   Object.assign(concert, updates, { updatedAt: new Date().toISOString() });
   await safeSave(concerts);
   return NextResponse.json(concerts);

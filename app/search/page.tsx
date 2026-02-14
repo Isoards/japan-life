@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -13,13 +13,10 @@ export default function SearchPage() {
   const { data: results = [], isLoading: loading } = useSearch(debouncedQuery);
   const searched = debouncedQuery.length >= 2;
 
-  // Debounce
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setDebouncedQuery("");
-      return;
-    }
-    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 400);
+    const nextQuery = query.trim();
+    const delay = nextQuery.length < 2 ? 0 : 400;
+    const timer = setTimeout(() => setDebouncedQuery(nextQuery.length < 2 ? "" : nextQuery), delay);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -27,9 +24,7 @@ export default function SearchPage() {
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-white">아티스트 검색</h1>
-        <p className="text-gray-400">
-          아티스트를 검색하고 즐겨찾기에 추가하세요
-        </p>
+        <p className="text-gray-400">아티스트를 검색하고 즐겨찾기에 추가하세요.</p>
       </div>
 
       <div className="max-w-xl mx-auto relative">
@@ -48,7 +43,7 @@ export default function SearchPage() {
         </svg>
         <input
           type="text"
-          placeholder="아티스트 이름으로 검색... (예: Official髭男dism, LiSA, King Gnu)"
+          placeholder="아티스트 이름으로 검색... (예: LiSA, King Gnu)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -65,28 +60,17 @@ export default function SearchPage() {
 
       {!loading && results.length > 0 && (
         <div className="max-w-3xl mx-auto">
-          <p className="text-sm text-gray-400 mb-4">
-            {results.length}명의 아티스트를 찾았습니다
-          </p>
+          <p className="text-sm text-gray-400 mb-4">{results.length}명의 아티스트를 찾았습니다.</p>
           <div className="space-y-3">
             {results.map((artist) => (
               <div
                 key={artist.itunesId}
                 className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               >
-                <Link
-                  href={`/artists/${artist.itunesId}`}
-                  className="flex items-center gap-4 flex-1 min-w-0"
-                >
+                <Link href={`/artists/${artist.itunesId}`} className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 relative">
                     {artist.imageUrl ? (
-                      <Image
-                        src={artist.imageUrl}
-                        alt={artist.name}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                      />
+                      <Image src={artist.imageUrl} alt={artist.name} fill className="object-cover" sizes="56px" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xl">
                         {artist.name.charAt(0)}
@@ -94,15 +78,10 @@ export default function SearchPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-white truncate">
-                      {artist.name}
-                    </h3>
-                    <div className="flex gap-1 mt-1">
+                    <h3 className="font-semibold text-white truncate">{artist.name}</h3>
+                    <div className="flex gap-1 mt-1 flex-wrap">
                       {artist.genres.map((g) => (
-                        <span
-                          key={g}
-                          className="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-300"
-                        >
+                        <span key={g} className="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-300">
                           {g}
                         </span>
                       ))}
@@ -124,9 +103,7 @@ export default function SearchPage() {
       )}
 
       {!loading && searched && results.length === 0 && (
-        <p className="text-gray-500 text-center py-8">
-          &ldquo;{debouncedQuery}&rdquo;에 대한 검색 결과가 없습니다
-        </p>
+        <p className="text-gray-500 text-center py-8">&ldquo;{debouncedQuery}&rdquo; 검색 결과가 없습니다.</p>
       )}
     </div>
   );

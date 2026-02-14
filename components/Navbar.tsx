@@ -32,7 +32,7 @@ export default function Navbar() {
               className="h-18 w-18 rounded-full"
               priority
             />
-            <span className="text-sm font-semibold text-white hidden sm:block">
+            <span className="text-lg font-semibold text-white hidden sm:block">
               Japan Life
             </span>
           </Link>

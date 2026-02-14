@@ -1,17 +1,20 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import type { BudgetCategory, BudgetPeriod } from "@/lib/types";
-import {
-  getDefaultBudget,
-  getBudgetByPeriod,
-  BUDGET_PERIOD_LABELS,
-  BUDGET_PERIOD_INCOME,
-} from "@/lib/calculator";
-import { useBudget, useSheetsSummary, mutateAPI } from "@/lib/hooks/use-api";
+import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/Toast";
+import { getDefaultBudget } from "@/lib/calculator";
+import { mutateAPI, useBudget, useSheetsSummary } from "@/lib/hooks/use-api";
+import type { BudgetCategory, SinkingFund } from "@/lib/types";
 
 type Tab = "budget" | "sheet";
-const ALL_PERIODS: BudgetPeriod[] = ["apr-jul", "aug-dec", "year2"];
+
+function getUsageLevel(actual: number, budget: number): "safe" | "warn" | "danger" {
+  if (budget <= 0) return "safe";
+  const ratio = actual / budget;
+  if (ratio > 1) return "danger";
+  if (ratio >= 0.8) return "warn";
+  return "safe";
+}
 
 export default function ExpensesPage() {
   const [tab, setTab] = useState<Tab>("budget");
@@ -22,24 +25,19 @@ export default function ExpensesPage() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
           가계부
         </h1>
-        <p className="text-gray-400 mt-1">
-          예산 관리 & Google Sheets 가계부 연동
-        </p>
+        <p className="text-gray-400 mt-1">예산 관리와 Google Sheets 가계부 연동</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
         {([
           { key: "budget", label: "🏠 예산 플래너" },
-          { key: "sheet", label: "📊 가계부 시트" },
+          { key: "sheet", label: "📤 가계부 시트" },
         ] as const).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.key
-                ? "bg-white/10 text-white"
-                : "text-gray-400 hover:text-white"
+              tab === t.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
             }`}
           >
             {t.label}
@@ -53,83 +51,150 @@ export default function ExpensesPage() {
   );
 }
 
-/* ──────────── 예산 플래너 ──────────── */
 function BudgetTab() {
   const { data: budgetData, isLoading } = useBudget();
-  const [period, setPeriod] = useState<BudgetPeriod>("apr-jul");
+  const { toast } = useToast();
+
   const [categories, setCategories] = useState<BudgetCategory[]>(getDefaultBudget());
   const [income, setIncome] = useState<string>("270000");
+  const [sinkingFunds, setSinkingFunds] = useState<SinkingFund[]>([]);
+  const [newFundName, setNewFundName] = useState("");
+  const [newFundTarget, setNewFundTarget] = useState("");
   const [initialized, setInitialized] = useState(false);
 
-  // 월 선택 (Sheets 연동)
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
   );
+
   const { data: sheetData, isLoading: sheetsLoading } = useSheetsSummary(selectedMonth);
+  const alertHistory = useRef<Set<string>>(new Set());
+  const prevStageByCategory = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (!budgetData || initialized) return;
-    if (budgetData.categories.length > 0) {
-      // 저장된 데이터에 sheetCategories가 없을 수 있으므로 프리셋에서 병합
-      const preset = getBudgetByPeriod(budgetData.period || "apr-jul");
-      const merged = budgetData.categories.map((cat: BudgetCategory) => {
-        if (cat.sheetCategories) return cat;
-        const match = preset.find((p) => p.id === cat.id);
-        return { ...cat, sheetCategories: match?.sheetCategories ?? [] };
-      });
-      setCategories(merged);
-    }
-    if (budgetData.income > 0) setIncome(String(budgetData.income));
-    if (budgetData.period) setPeriod(budgetData.period);
-    setInitialized(true);
+
+    const timer = setTimeout(() => {
+      if (budgetData.categories.length > 0) {
+        const preset = getDefaultBudget();
+        const merged = budgetData.categories.map((cat: BudgetCategory) => {
+          if (cat.sheetCategories) return cat;
+          const match = preset.find((p) => p.id === cat.id);
+          return { ...cat, sheetCategories: match?.sheetCategories ?? [] };
+        });
+        setCategories(merged);
+      }
+
+      if (budgetData.income > 0) setIncome(String(budgetData.income));
+      setSinkingFunds(budgetData.sinkingFunds ?? []);
+      setInitialized(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [budgetData, initialized]);
 
-  const save = async (cats: BudgetCategory[], inc: string, p: BudgetPeriod) => {
-    const incVal = parseInt(inc) || 0;
+  const save = async (cats: BudgetCategory[], inc: string, funds: SinkingFund[]) => {
+    const incVal = parseInt(inc, 10) || 0;
     await mutateAPI("/api/budget", "POST", {
       income: incVal,
       categories: cats,
-      period: p,
+      sinkingFunds: funds,
     });
   };
 
-  const switchPeriod = (p: BudgetPeriod) => {
-    setPeriod(p);
-    const newCats = getBudgetByPeriod(p);
-    const newIncome = String(BUDGET_PERIOD_INCOME[p]);
-    setCategories(newCats);
-    setIncome(newIncome);
-    save(newCats, newIncome, p);
-  };
+  useEffect(() => {
+    if (!sheetData || sheetsLoading) return;
+
+    const currentStageMap: Record<string, string> = {};
+    const hasPreviousSnapshot = Object.keys(prevStageByCategory.current).length > 0;
+
+    for (const cat of categories) {
+      if (cat.amount <= 0) continue;
+      const actual = (cat.sheetCategories ?? []).reduce((sum, key) => sum + (sheetData.byCategory[key] || 0), 0);
+      const level = getUsageLevel(actual, cat.amount);
+      const stage = level === "danger" ? "danger" : actual === cat.amount ? "full" : level === "warn" ? "warn" : "safe";
+      currentStageMap[cat.id] = stage;
+
+      // 첫 스냅샷에서는 과거 상태가 없으므로 알림을 띄우지 않는다.
+      if (!hasPreviousSnapshot) continue;
+
+      // 임계치 구간으로 "진입"할 때만 알림
+      if (prevStageByCategory.current[cat.id] === stage || stage === "safe") continue;
+
+      const key = `${selectedMonth}:${cat.id}:${stage}`;
+      if (alertHistory.current.has(key)) continue;
+      alertHistory.current.add(key);
+
+      if (level === "danger") {
+        const pct = Math.max(101, Math.ceil((actual / cat.amount) * 100));
+        toast(`${cat.label} 예산을 초과했어요. (${pct}%)`, "error");
+      } else if (actual === cat.amount) {
+        toast(`${cat.label} 예산 한도(100%)에 도달했어요.`, "info");
+      } else {
+        toast(`${cat.label} 예산 사용률 80%를 넘었어요.`, "info");
+      }
+    }
+
+    prevStageByCategory.current = currentStageMap;
+  }, [categories, selectedMonth, sheetData, sheetsLoading, toast]);
 
   const updateAmount = (id: string, amount: number) => {
     const updated = categories.map((c) => (c.id === id ? { ...c, amount } : c));
     setCategories(updated);
-    save(updated, income, period);
+    save(updated, income, sinkingFunds);
   };
 
   const shiftMonth = (delta: number) => {
     const [y, m] = selectedMonth.split("-").map(Number);
     const d = new Date(y, m - 1 + delta, 1);
-    setSelectedMonth(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-    );
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const updateSinkingFund = (id: string, patch: Partial<SinkingFund>) => {
+    const updated = sinkingFunds.map((f) => (f.id === id ? { ...f, ...patch } : f));
+    setSinkingFunds(updated);
+    save(categories, income, updated);
+  };
+
+  const deleteSinkingFund = (id: string) => {
+    const updated = sinkingFunds.filter((f) => f.id !== id);
+    setSinkingFunds(updated);
+    save(categories, income, updated);
+  };
+
+  const addSinkingFund = () => {
+    const name = newFundName.trim();
+    const targetAmount = parseInt(newFundTarget, 10) || 0;
+    if (!name || targetAmount <= 0) {
+      toast("목표저축 이름과 목표 금액을 입력해주세요.", "error");
+      return;
+    }
+
+    const fund: SinkingFund = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      targetAmount,
+      savedAmount: 0,
+    };
+
+    const updated = [...sinkingFunds, fund];
+    setSinkingFunds(updated);
+    setNewFundName("");
+    setNewFundTarget("");
+    save(categories, income, updated);
+    toast("목표저축을 추가했습니다.");
   };
 
   const getActual = (cat: BudgetCategory): number => {
     if (!sheetData || !cat.sheetCategories) return 0;
-    return cat.sheetCategories.reduce(
-      (sum, sc) => sum + (sheetData.byCategory[sc] || 0),
-      0,
-    );
+    return cat.sheetCategories.reduce((sum, sc) => sum + (sheetData.byCategory[sc] || 0), 0);
   };
 
-  const incomeVal = parseInt(income) || 0;
+  const incomeVal = parseInt(income, 10) || 0;
   const totalBudget = categories.reduce((sum, c) => sum + c.amount, 0);
-  const totalActual = sheetData
-    ? categories.reduce((sum, c) => sum + getActual(c), 0)
-    : 0;
+  const totalActual = sheetData ? categories.reduce((sum, c) => sum + getActual(c), 0) : 0;
+  const totalUsageLevel = getUsageLevel(totalActual, totalBudget);
+
   const fmt = (n: number) => n.toLocaleString("ja-JP");
   const monthLabel = (() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -142,33 +207,6 @@ function BudgetTab() {
 
   return (
     <div className="space-y-6">
-      {/* Period selector */}
-      <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
-        {ALL_PERIODS.map((p) => (
-          <button
-            key={p}
-            onClick={() => switchPeriod(p)}
-            className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              period === p
-                ? "bg-white/10 text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            {BUDGET_PERIOD_LABELS[p]}
-          </button>
-        ))}
-      </div>
-
-      {/* Period description */}
-      <div className="rounded-xl border border-white/10 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-4">
-        <div className="text-sm text-gray-300">
-          {period === "apr-jul" && "연수/실습 기간. 8월 차량 구입을 위해 절약 목표"}
-          {period === "aug-dec" && "본배속 + 차량 구입. 기존 저축액을 유지비로 전환"}
-          {period === "year2" && "안정기. 부양공제 환급금 연 +23만엔 포함"}
-        </div>
-      </div>
-
-      {/* Month selector + Income */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-white/5 p-4">
           <label className="block text-sm text-gray-400 mb-2">조회 월 (Sheets 연동)</label>
@@ -179,9 +217,7 @@ function BudgetTab() {
             >
               &lt;
             </button>
-            <span className="flex-1 text-center text-white font-medium">
-              {monthLabel}
-            </span>
+            <span className="flex-1 text-center text-white font-medium">{monthLabel}</span>
             <button
               onClick={() => shiftMonth(1)}
               className="px-3 py-2 rounded-lg bg-white/10 text-gray-300 hover:text-white hover:bg-white/15 transition-colors"
@@ -190,8 +226,9 @@ function BudgetTab() {
             </button>
           </div>
         </div>
+
         <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <label className="block text-sm text-gray-400 mb-2">월 수입 (실수령액, 엔)</label>
+          <label className="block text-sm text-gray-400 mb-2">월 실수령 수입 (세후)</label>
           <div className="flex items-center gap-2">
             <span className="text-gray-500">¥</span>
             <input
@@ -199,7 +236,7 @@ function BudgetTab() {
               value={income}
               onChange={(e) => {
                 setIncome(e.target.value);
-                save(categories, e.target.value, period);
+                save(categories, e.target.value, sinkingFunds);
               }}
               className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-lg font-mono focus:outline-none focus:border-purple-500/50"
             />
@@ -207,7 +244,6 @@ function BudgetTab() {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
           <div className="text-xs text-gray-500">수입</div>
@@ -219,77 +255,58 @@ function BudgetTab() {
         </div>
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
           <div className="text-xs text-gray-500">실제 지출</div>
-          <div className="text-lg font-bold text-pink-400">
-            {sheetsLoading ? (
-              <span className="text-gray-500">...</span>
-            ) : (
-              `¥${fmt(totalActual)}`
-            )}
+          <div
+            className={`text-lg font-bold ${
+              totalUsageLevel === "danger" ? "text-red-400" : totalUsageLevel === "warn" ? "text-amber-400" : "text-pink-400"
+            }`}
+          >
+            {sheetsLoading ? <span className="text-gray-500">...</span> : `¥${fmt(totalActual)}`}
           </div>
         </div>
         <div
           className={`rounded-xl border p-4 text-center ${
-            incomeVal - totalActual >= 0
-              ? "border-emerald-500/20 bg-emerald-500/5"
-              : "border-red-500/20 bg-red-500/5"
+            incomeVal - totalActual >= 0 ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"
           }`}
         >
           <div className="text-xs text-gray-500">잔액 (실제)</div>
-          <div
-            className={`text-lg font-bold ${
-              incomeVal - totalActual >= 0 ? "text-emerald-400" : "text-red-400"
-            }`}
-          >
-            {sheetsLoading ? (
-              <span className="text-gray-500">...</span>
-            ) : (
-              `¥${fmt(incomeVal - totalActual)}`
-            )}
+          <div className={`text-lg font-bold ${incomeVal - totalActual >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            {sheetsLoading ? <span className="text-gray-500">...</span> : `¥${fmt(incomeVal - totalActual)}`}
           </div>
         </div>
       </div>
 
-      {/* Sheets income info */}
       {sheetData && sheetData.totalIncome > 0 && (
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex items-center justify-between">
-          <span className="text-sm text-blue-300">
-            Sheets {monthLabel} 수입 합계
-          </span>
-          <span className="text-sm font-bold text-blue-400">
-            ¥{fmt(sheetData.totalIncome)}
-          </span>
+          <span className="text-sm text-blue-300">Sheets {monthLabel} 수입 합계</span>
+          <span className="text-sm font-bold text-blue-400">¥{fmt(sheetData.totalIncome)}</span>
         </div>
       )}
 
-      {/* Progress bar */}
       {totalBudget > 0 && (
         <div className="space-y-1">
           <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden relative">
-            {/* 예산 기준선 */}
             <div
               className="h-full rounded-full bg-gradient-to-r from-purple-500/30 to-purple-500/20 absolute"
               style={{ width: "100%" }}
             />
-            {/* 실제 지출 */}
             <div
               className={`h-full rounded-full transition-all duration-300 absolute ${
-                totalActual > totalBudget
+                totalUsageLevel === "danger"
                   ? "bg-gradient-to-r from-red-500 to-red-400"
-                  : "bg-gradient-to-r from-pink-500 to-purple-500"
+                  : totalUsageLevel === "warn"
+                    ? "bg-gradient-to-r from-amber-500 to-orange-400"
+                    : "bg-gradient-to-r from-pink-500 to-purple-500"
               }`}
-              style={{
-                width: `${Math.min((totalActual / totalBudget) * 100, 100)}%`,
-              }}
+              style={{ width: `${Math.min((totalActual / totalBudget) * 100, 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>실제 {totalBudget > 0 ? ((totalActual / totalBudget) * 100).toFixed(0) : 0}%</span>
+            <span>실제 {((totalActual / totalBudget) * 100).toFixed(0)}%</span>
             <span>예산 ¥{fmt(totalBudget)}</span>
           </div>
         </div>
       )}
 
-      {/* Category breakdown */}
       <div className="space-y-2">
         <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 px-3 py-2 text-xs text-gray-500">
           <span />
@@ -298,24 +315,28 @@ function BudgetTab() {
           <span className="text-right">실제</span>
           <span className="text-right">차이</span>
         </div>
+
         {categories.map((cat) => {
           const actual = getActual(cat);
           const diff = cat.amount - actual;
-          const overBudget = cat.amount > 0 && actual > cat.amount;
+          const usageLevel = getUsageLevel(actual, cat.amount);
+
           return (
             <div
               key={cat.id}
-              className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center p-3 rounded-lg border border-white/10 bg-white/5"
+              className={`grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center p-3 rounded-lg border bg-white/5 ${
+                usageLevel === "danger"
+                  ? "border-red-500/30"
+                  : usageLevel === "warn"
+                    ? "border-amber-500/30"
+                    : "border-white/10"
+              }`}
             >
               <span className="text-lg shrink-0">{cat.icon}</span>
               <div className="min-w-0">
-                <span className="text-sm text-gray-300 truncate block">
-                  {cat.label}
-                </span>
+                <span className="text-sm text-gray-300 truncate block">{cat.label}</span>
                 {cat.sheetCategories?.length > 0 && (
-                  <span className="text-[10px] text-gray-600 truncate block">
-                    {cat.sheetCategories.join(", ")}
-                  </span>
+                  <span className="text-[10px] text-gray-600 truncate block">{cat.sheetCategories.join(", ")}</span>
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -323,9 +344,7 @@ function BudgetTab() {
                 <input
                   type="number"
                   value={cat.amount}
-                  onChange={(e) =>
-                    updateAmount(cat.id, parseInt(e.target.value) || 0)
-                  }
+                  onChange={(e) => updateAmount(cat.id, parseInt(e.target.value, 10) || 0)}
                   className="w-[72px] px-2 py-1 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-mono text-right focus:outline-none focus:border-purple-500/50"
                 />
               </div>
@@ -334,57 +353,130 @@ function BudgetTab() {
               </span>
               <span
                 className={`text-sm font-mono w-[80px] text-right shrink-0 ${
-                  overBudget ? "text-red-400" : diff >= 0 ? "text-emerald-400" : "text-gray-500"
+                  usageLevel === "danger" ? "text-red-400" : usageLevel === "warn" ? "text-amber-400" : diff >= 0 ? "text-emerald-400" : "text-gray-500"
                 }`}
               >
-                {sheetsLoading
-                  ? "..."
-                  : cat.amount === 0 && actual === 0
-                    ? "-"
-                    : `${diff >= 0 ? "+" : ""}¥${fmt(diff)}`}
+                {sheetsLoading ? "..." : cat.amount === 0 && actual === 0 ? "-" : `${diff >= 0 ? "+" : ""}¥${fmt(diff)}`}
               </span>
             </div>
           );
         })}
       </div>
 
-      {/* Year 2 tax refund info */}
-      {period === "year2" && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-          <h3 className="text-sm font-bold text-emerald-400 mb-2">
-            연말정산 부양공제 환급
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-gray-500">부양가족 3명</div>
-              <div className="text-white">
-                아빠(38만) + 엄마(38만) + 할머니(48만)
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-500">연간 송금액</div>
-              <div className="text-white">¥1,240,000 (보너스 활용)</div>
-            </div>
-            <div>
-              <div className="text-gray-500">연간 환급/절감</div>
-              <div className="text-emerald-400 font-bold">+¥230,000/년</div>
-            </div>
-            <div>
-              <div className="text-gray-500">월 환산</div>
-              <div className="text-emerald-400 font-bold">+¥19,167/월</div>
-            </div>
-          </div>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-white">목표저축 (싱킹펀드)</h3>
+          <span className="text-xs text-gray-500">미래 지출을 미리 적립</span>
         </div>
-      )}
 
-      <p className="text-xs text-gray-600">
-        * 예산은 자동 저장됩니다. 실제 지출은 Google Sheets 가계부에서 불러옵니다.
-      </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            value={newFundName}
+            onChange={(e) => setNewFundName(e.target.value)}
+            placeholder="예: 차량 구매"
+            className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm focus:outline-none focus:border-purple-500/50"
+          />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/10">
+            <span className="text-gray-500 text-xs">¥</span>
+            <input
+              type="number"
+              value={newFundTarget}
+              onChange={(e) => setNewFundTarget(e.target.value)}
+              placeholder="목표금액"
+              className="w-28 bg-transparent text-white text-sm font-mono focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={addSinkingFund}
+            className="px-3 py-2 rounded-lg bg-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/30 transition-colors"
+          >
+            추가
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {sinkingFunds.length === 0 && (
+            <p className="text-sm text-gray-500">아직 등록된 목표저축이 없습니다.</p>
+          )}
+
+          {sinkingFunds.map((fund) => {
+            const progress = fund.targetAmount > 0 ? Math.min((fund.savedAmount / fund.targetAmount) * 100, 100) : 0;
+            return (
+              <div key={fund.id} className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <input
+                    value={fund.name}
+                    onChange={(e) => updateSinkingFund(fund.id, { name: e.target.value })}
+                    className="bg-transparent text-white text-sm font-medium focus:outline-none border-b border-transparent focus:border-white/20"
+                  />
+                  <button
+                    onClick={() => deleteSinkingFund(fund.id)}
+                    className="text-xs px-2 py-1 rounded bg-red-500/15 text-red-300 hover:bg-red-500/25"
+                  >
+                    삭제
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <label className="text-xs text-gray-400">
+                    목표 금액
+                    <div className="mt-1 flex items-center gap-1 px-2 py-1 rounded bg-white/10 border border-white/10">
+                      <span className="text-gray-500">¥</span>
+                      <input
+                        type="number"
+                        value={fund.targetAmount}
+                        onChange={(e) => updateSinkingFund(fund.id, { targetAmount: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full bg-transparent text-white font-mono focus:outline-none"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="text-xs text-gray-400">
+                    현재 적립액
+                    <div className="mt-1 flex items-center gap-1 px-2 py-1 rounded bg-white/10 border border-white/10">
+                      <span className="text-gray-500">¥</span>
+                      <input
+                        type="number"
+                        value={fund.savedAmount}
+                        onChange={(e) => updateSinkingFund(fund.id, { savedAmount: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full bg-transparent text-white font-mono focus:outline-none"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="text-xs text-gray-400">
+                    목표 월 (선택)
+                    <input
+                      type="month"
+                      value={fund.targetMonth || ""}
+                      onChange={(e) => updateSinkingFund(fund.id, { targetMonth: e.target.value || undefined })}
+                      className="mt-1 w-full px-2 py-1 rounded bg-white/10 border border-white/10 text-white focus:outline-none"
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-gray-500">
+                    <span>{progress.toFixed(0)}%</span>
+                    <span>
+                      ¥{fmt(fund.savedAmount)} / ¥{fmt(fund.targetAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-600">* 예산과 목표저축은 자동 저장됩니다. 실제 지출은 Google Sheets 가계부에서 불러옵니다.</p>
     </div>
   );
 }
 
-/* ──────────── 가계부 시트 ──────────── */
 function SheetTab() {
   const sheetId = "1volLOrTwvHDDOCXY_AD7fLqVd5JVHHm9HsPg7QTZ0qg";
   const embedUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit?usp=sharing&rm=minimal`;
@@ -398,7 +490,7 @@ function SheetTab() {
           rel="noopener noreferrer"
           className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
         >
-          새 탭에서 열기
+          시트 열기
         </a>
         <a
           href="https://moneyforward.com/"
@@ -410,15 +502,8 @@ function SheetTab() {
         </a>
       </div>
 
-      <div
-        className="rounded-xl border border-white/10 overflow-hidden"
-        style={{ height: "700px" }}
-      >
-        <iframe
-          src={embedUrl}
-          style={{ width: "100%", height: "100%", border: "none" }}
-          title="가계부 스프레드시트"
-        />
+      <div className="rounded-xl border border-white/10 overflow-hidden" style={{ height: "700px" }}>
+        <iframe src={embedUrl} style={{ width: "100%", height: "100%", border: "none" }} title="가계부 스프레드시트" />
       </div>
     </div>
   );

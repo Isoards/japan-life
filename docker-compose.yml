@@ -8,7 +8,7 @@ services:
       - japan-life-data:/app/data/user
     environment:
       - DATA_DIR=/app/data/user
-      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+      - GOOGLE_SHEETS_API_KEY=${GOOGLE_SHEETS_API_KEY:-}
     restart: unless-stopped
 
 volumes:

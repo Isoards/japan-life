@@ -1,4 +1,4 @@
-export interface Artist {
+﻿export interface Artist {
   slug: string;
   name: string;
   nameJa: string;
@@ -38,8 +38,6 @@ export interface EnrichedArtist extends Artist {
   itunesTracks: ITunesTrack[];
 }
 
-// ── 취업/이주 준비 대시보드 타입 ──
-
 export type ChecklistCategory = "pre-departure" | "post-arrival" | "living-setup" | "workplace" | "finance";
 export type ChecklistPriority = "high" | "medium" | "low";
 
@@ -78,6 +76,14 @@ export interface BudgetCategory {
   sheetCategories: string[];
 }
 
+export interface SinkingFund {
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  targetMonth?: string;
+}
+
 export interface SheetsSummary {
   month: string;
   byCategory: Record<string, number>;
@@ -86,12 +92,10 @@ export interface SheetsSummary {
   totalSaving: number;
 }
 
-export type BudgetPeriod = "apr-jul" | "aug-dec" | "year2";
-
 export interface BudgetData {
   income: number;
   categories: BudgetCategory[];
-  period?: BudgetPeriod;
+  sinkingFunds: SinkingFund[];
 }
 
 export interface GuideSection {
@@ -106,8 +110,6 @@ export interface GuideItem {
   content: string;
   linkedChecklist?: string[];
 }
-
-// ── 메모장 ──
 
 export type NoteCategory = "business" | "honda" | "daily" | "other";
 
@@ -128,8 +130,6 @@ export interface QuickLink {
   icon?: string;
 }
 
-// ── 주간 회고 로그 ──
-
 export interface WeeklyLog {
   id: string;
   week: string;
@@ -139,8 +139,6 @@ export interface WeeklyLog {
   memo?: string;
   createdAt: string;
 }
-
-// ── 노래방 검색 ──
 
 export interface KaraokeSong {
   brand: "tj" | "kumyoung";

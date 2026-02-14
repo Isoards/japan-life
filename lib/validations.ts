@@ -1,6 +1,4 @@
-import { z } from "zod";
-
-// ── Notes ──
+﻿import { z } from "zod";
 
 export const noteSchema = z.object({
   japanese: z.string().min(1),
@@ -14,8 +12,6 @@ export const notePatchSchema = noteSchema.extend({
   id: z.string().min(1),
 });
 
-// ── Budget ──
-
 export const budgetCategorySchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -24,13 +20,19 @@ export const budgetCategorySchema = z.object({
   sheetCategories: z.array(z.string()).optional(),
 });
 
+export const sinkingFundSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  targetAmount: z.number().min(1),
+  savedAmount: z.number().min(0),
+  targetMonth: z.string().optional(),
+});
+
 export const budgetSchema = z.object({
   income: z.number().min(0),
   categories: z.array(budgetCategorySchema),
-  period: z.enum(["apr-jul", "aug-dec", "year2"]).optional(),
+  sinkingFunds: z.array(sinkingFundSchema).optional().default([]),
 });
-
-// ── Checklist ──
 
 export const checklistItemSchema = z.object({
   id: z.string().min(1),
@@ -42,8 +44,6 @@ export const checklistItemSchema = z.object({
   custom: z.boolean().optional(),
 });
 
-// ── Links ──
-
 export const linkSchema = z.object({
   title: z.string().min(1),
   url: z.string().url(),
@@ -54,8 +54,6 @@ export const linkSchema = z.object({
 export const linkPatchSchema = linkSchema.extend({
   id: z.string().min(1),
 });
-
-// ── User Concerts ──
 
 export const showTimeSchema = z.object({
   date: z.string().min(1),
@@ -113,8 +111,6 @@ export const userConcertPatchSchema = userConcertSchema.partial().extend({
   id: z.string().min(1),
 });
 
-// ── Weekly Logs ──
-
 export const weeklyLogSchema = z.object({
   week: z.string().min(1),
   technical: z.string().min(1),
@@ -127,18 +123,17 @@ export const weeklyLogPatchSchema = weeklyLogSchema.extend({
   id: z.string().min(1),
 });
 
-// ── Helpers ──
-
 export const idSchema = z.object({
   id: z.string().min(1),
 });
 
-/** Parse with zod — returns data or throws a string error for the caller to catch */
+/** Parse with zod - returns data or a string error message. */
 export function parseOrError<T>(schema: z.ZodType<T>, data: unknown): { ok: true; data: T } | { ok: false; error: string } {
   const result = schema.safeParse(data);
   if (result.success) {
     return { ok: true, data: result.data };
   }
+
   const messages = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
   return { ok: false, error: messages };
 }

@@ -1,4 +1,4 @@
-import type { SalaryBreakdown, BudgetCategory, BudgetPeriod } from "./types";
+﻿import type { SalaryBreakdown, BudgetCategory } from "./types";
 import {
   EMPLOYMENT_DEDUCTION_BRACKETS,
   INCOME_TAX_BRACKETS,
@@ -10,17 +10,14 @@ import {
   BONUS_SOCIAL_RATE,
   BONUS_TAX_BRACKETS,
   BONUS_PAYMENTS_PER_YEAR,
-  BUDGET_PRESETS,
+  DEFAULT_BUDGET_CATEGORIES,
 } from "./constants";
-
-// 기존 import 호환용 재수출
-export { BUDGET_PERIOD_LABELS, BUDGET_PERIOD_INCOME } from "./constants";
 
 /**
  * 일본 급여 계산 (2025~2026년 기준 근사치)
  * - 소득세: 누진세율 (5%~45%)
- * - 주민세: 약 10% (시구정촌민세 6% + 도도부현민세 4%)
- * - 건강보험: 약 5% (토치기현 기준 근사)
+ * - 주민세: 약 10% (시군구민세 6% + 도도부현민세 4%)
+ * - 건강보험: 약 5% (도치기현 기준 근사)
  * - 후생연금: 9.15%
  * - 고용보험: 0.6%
  */
@@ -28,34 +25,27 @@ export function calculateSalary(monthlyBase: number, bonusMonths: number): Salar
   const grossAnnual = monthlyBase * (12 + bonusMonths);
   const grossMonthly = monthlyBase;
 
-  // 소득세 (누진세율 - 연간 기준, 기초공제 + 급여소득공제 적용)
   const employmentDeduction = calcEmploymentDeduction(grossAnnual);
   const taxableIncome = Math.max(0, grossAnnual - employmentDeduction - BASIC_DEDUCTION);
   const annualIncomeTax = calcProgressiveTax(taxableIncome);
   const incomeTax = Math.round(annualIncomeTax / 12);
 
-  // 주민세
   const annualResidentTax = Math.round(taxableIncome * RESIDENT_TAX_RATE);
   const residentTax = Math.round(annualResidentTax / 12);
 
-  // 건강보험
   const healthInsurance = Math.round(grossMonthly * HEALTH_INSURANCE_RATE);
-
-  // 후생연금
   const pension = Math.round(grossMonthly * PENSION_RATE);
-
-  // 고용보험
   const employmentInsurance = Math.round(grossMonthly * EMPLOYMENT_INSURANCE_RATE);
 
   const totalDeductions =
     incomeTax + residentTax + healthInsurance + pension + employmentInsurance;
   const netMonthly = grossMonthly - totalDeductions;
 
-  // 보너스 계산
   const bonusPayments = bonusMonths > 0 ? BONUS_PAYMENTS_PER_YEAR : 0;
   const bonusGrossPerPayment = bonusPayments > 0
     ? Math.round((monthlyBase * bonusMonths) / bonusPayments)
     : 0;
+
   let bonusTaxRate = 0;
   for (const [limit, rate] of BONUS_TAX_BRACKETS) {
     if (taxableIncome <= limit) {
@@ -63,6 +53,7 @@ export function calculateSalary(monthlyBase: number, bonusMonths: number): Salar
       break;
     }
   }
+
   const bonusNetPerPayment = bonusPayments > 0
     ? Math.round(bonusGrossPerPayment * (1 - BONUS_SOCIAL_RATE - bonusTaxRate))
     : 0;
@@ -107,17 +98,12 @@ function calcProgressiveTax(taxable: number): number {
   return 0;
 }
 
-/** 기간별 기본 생활비 프리셋 */
-export function getBudgetByPeriod(period: BudgetPeriod): BudgetCategory[] {
-  return BUDGET_PRESETS[period];
-}
-
-/** 토치기현 기준 기본 생활비 (기본값: 4~7월) */
+/** 기본 예산 카테고리 */
 export function getDefaultBudget(): BudgetCategory[] {
-  return getBudgetByPeriod("apr-jul");
+  return DEFAULT_BUDGET_CATEGORIES.map((category) => ({ ...category }));
 }
 
-/** 환율 변환 (rate = 100엔 당 원화, 예: 920) */
+/** 환율 변환 (rate = 100엔당 원화, 예: 920) */
 export function convertCurrency(
   amount: number,
   ratePer100Yen: number,
