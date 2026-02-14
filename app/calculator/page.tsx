@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { SalaryBreakdown } from "@/lib/types";
 import { calculateSalary, convertCurrency } from "@/lib/calculator";
-import { useExchangeRate } from "@/lib/hooks/use-api";
+import { useLiveExchangeRates } from "@/lib/hooks/use-api";
 
 type Tab = "salary" | "exchange";
 
@@ -312,14 +312,14 @@ function SalaryTab() {
 
 /* ──────────── 환율 계산기 ──────────── */
 function ExchangeTab() {
-  const { data: rateData, isLoading: rateLoading, mutate: refreshRateSWR } = useExchangeRate();
+  const { data: rateData, isLoading: rateLoading, mutate: refreshRateSWR } = useLiveExchangeRates();
   const [rateOverride, setRateOverride] = useState<string | null>(null);
   const [amount, setAmount] = useState<string>("100000");
   const [direction, setDirection] = useState<"krw-to-jpy" | "jpy-to-krw">(
     "jpy-to-krw",
   );
 
-  const rate = rateOverride ?? (rateData?.rate ? String(rateData.rate) : "");
+  const rate = rateOverride ?? (rateData?.krwJpy ? String(rateData.krwJpy) : "");
   const lastUpdated = rateData && !rateData.fallback
     ? new Date().toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })
     : null;

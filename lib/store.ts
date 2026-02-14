@@ -15,7 +15,6 @@ const STORE_VERSIONS: Record<string, number> = {
   budget: 2,
   checklist: 1,
   notes: 1,
-  spots: 1,
   favorites: 1,
   links: 1,
   "user-concerts": 1,

@@ -2,7 +2,6 @@ import useSWR, { mutate } from "swr";
 import { fetcher } from "../fetcher";
 import type {
   ChecklistItem,
-  MapSpot,
   Note,
   QuickLink,
   BudgetData,
@@ -39,13 +38,6 @@ export function useConcerts() {
 
 export function useNotes() {
   return useSWR<Note[]>("/api/notes", fetcher, {
-    fallbackData: [],
-    revalidateOnFocus: false,
-  });
-}
-
-export function useSpots() {
-  return useSWR<MapSpot[]>("/api/spots", fetcher, {
     fallbackData: [],
     revalidateOnFocus: false,
   });
@@ -100,19 +92,6 @@ export function useTopSongs() {
   });
 }
 
-export interface ExchangeRateData {
-  rate: number;
-  cached?: boolean;
-  fallback?: boolean;
-}
-
-export function useExchangeRate() {
-  return useSWR<ExchangeRateData>("/api/exchange-rate", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 600_000, // 10분 중복 방지
-  });
-}
-
 export interface LiveExchangeRates {
   krwJpy: number;
   krwUsd: number;
@@ -124,7 +103,7 @@ export interface LiveExchangeRates {
 export function useLiveExchangeRates() {
   return useSWR<LiveExchangeRates>("/api/exchange-rates", fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 300_000,
+    dedupingInterval: 600_000, // 10분 중복 방지
   });
 }
 

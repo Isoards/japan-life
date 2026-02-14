@@ -107,32 +107,6 @@ export interface GuideItem {
   linkedChecklist?: string[];
 }
 
-// ── 활동 지도 ──
-
-export type SpotCategory =
-  | "food"
-  | "sightseeing"
-  | "shopping"
-  | "daily"
-  | "work"
-  | "government"
-  | "medical"
-  | "finance"
-  | "transport"
-  | "other";
-
-export interface MapSpot {
-  id: string;
-  name: string;
-  category: SpotCategory;
-  lat: number;
-  lng: number;
-  memo?: string;
-  date?: string;
-  address?: string;
-  area: "yokohama" | "tochigi" | "other";
-}
-
 // ── 메모장 ──
 
 export type NoteCategory = "business" | "honda" | "daily" | "other";

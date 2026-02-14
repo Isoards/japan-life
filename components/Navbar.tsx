@@ -12,7 +12,6 @@ const navLinks = [
   { href: "/checklist", label: "체크리스트" },
   { href: "/calculator", label: "계산기" },
   { href: "/guide", label: "생활 가이드" },
-  { href: "/map", label: "지도" },
   { href: "/expenses", label: "가계부" },
   { href: "/notes", label: "메모" },
   { href: "/logs", label: "주간 로그" },
@@ -25,13 +24,13 @@ export default function Navbar() {
     <nav className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-3 shrink-0">
+          <Link href="/" className="shrink-0">
             <Image
-              src="/jp_logo.png"
+              src="/jp_icon_v2.png"
               alt="Japan Life"
-              width={132}
-              height={28}
-              className="h-7 w-auto"
+              width={512}
+              height={512}
+              className="h-9 w-9 rounded-full"
               priority
             />
           </Link>

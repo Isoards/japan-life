@@ -14,7 +14,8 @@
       "WebFetch(domain:api.manana.kr)",
       "Bash(curl:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "WebFetch(domain:wise.com)"
     ]
   }
 }

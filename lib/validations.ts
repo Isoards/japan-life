@@ -14,23 +14,6 @@ export const notePatchSchema = noteSchema.extend({
   id: z.string().min(1),
 });
 
-// ── Spots ──
-
-export const spotSchema = z.object({
-  name: z.string().min(1),
-  category: z.enum(["food", "sightseeing", "shopping", "daily", "work", "government", "medical", "finance", "transport", "other"]),
-  lat: z.number(),
-  lng: z.number(),
-  memo: z.string().optional(),
-  date: z.string().optional(),
-  address: z.string().optional(),
-  area: z.enum(["yokohama", "tochigi", "other"]),
-});
-
-export const spotPatchSchema = spotSchema.extend({
-  id: z.string().min(1),
-});
-
 // ── Budget ──
 
 export const budgetCategorySchema = z.object({

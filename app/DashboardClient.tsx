@@ -29,21 +29,30 @@ export default function DashboardClient() {
   const { data: budget } = useBudget();
   const { data: liveRates, isLoading: ratesLoading } = useLiveExchangeRates();
   const currentMonth = useMemo(
-    () => `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+    () =>
+      `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
     [],
   );
   const currentMonthLabel = useMemo(
-    () => new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" }),
+    () =>
+      new Date().toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+      }),
     [],
   );
-  const { data: currentMonthSheet, isLoading: monthSheetLoading } = useSheetsSummary(currentMonth);
+  const { data: currentMonthSheet, isLoading: monthSheetLoading } =
+    useSheetsSummary(currentMonth);
 
   const releaseIds = useMemo(
-    () => (favorites.length > 0 ? favorites.map((f) => f.itunesId).join(",") : null),
+    () =>
+      favorites.length > 0 ? favorites.map((f) => f.itunesId).join(",") : null,
     [favorites],
   );
-  const { data: newReleases = [], isLoading: releasesLoading } = useReleases(releaseIds);
-  const { data: searchResults = [], isLoading: searching } = useSearch(debouncedQuery);
+  const { data: newReleases = [], isLoading: releasesLoading } =
+    useReleases(releaseIds);
+  const { data: searchResults = [], isLoading: searching } =
+    useSearch(debouncedQuery);
 
   useEffect(() => {
     const nextQuery = searchQuery.trim();
@@ -54,16 +63,19 @@ export default function DashboardClient() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { checkedCount, totalChecklist, checklistPct, highPriorityLeft } = useMemo(() => {
-    const checked = checklist.filter((c) => c.checked).length;
-    const total = checklist.length;
-    return {
-      checkedCount: checked,
-      totalChecklist: total,
-      checklistPct: total > 0 ? Math.round((checked / total) * 100) : 0,
-      highPriorityLeft: checklist.filter((c) => c.priority === "high" && !c.checked).length,
-    };
-  }, [checklist]);
+  const { checkedCount, totalChecklist, checklistPct, highPriorityLeft } =
+    useMemo(() => {
+      const checked = checklist.filter((c) => c.checked).length;
+      const total = checklist.length;
+      return {
+        checkedCount: checked,
+        totalChecklist: total,
+        checklistPct: total > 0 ? Math.round((checked / total) * 100) : 0,
+        highPriorityLeft: checklist.filter(
+          (c) => c.priority === "high" && !c.checked,
+        ).length,
+      };
+    }, [checklist]);
 
   const { upcomingConcerts, nextConcert } = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -74,7 +86,9 @@ export default function DashboardClient() {
   }, [concerts]);
 
   const { budgetTotal, budgetSpent, budgetRemaining } = useMemo(() => {
-    const total = budget?.categories?.reduce((sum, category) => sum + category.amount, 0) ?? 0;
+    const total =
+      budget?.categories?.reduce((sum, category) => sum + category.amount, 0) ??
+      0;
     const spent = currentMonthSheet
       ? (budget?.categories ?? []).reduce((sum, category) => {
           const sheetKeys = category.sheetCategories ?? [];
@@ -85,26 +99,47 @@ export default function DashboardClient() {
           return sum + categorySpent;
         }, 0)
       : 0;
-    return { budgetTotal: total, budgetSpent: spent, budgetRemaining: total - spent };
+    return {
+      budgetTotal: total,
+      budgetSpent: spent,
+      budgetRemaining: total - spent,
+    };
   }, [budget, currentMonthSheet]);
 
   return (
     <div className="space-y-10">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-          Japan Life
-        </h1>
-        <p className="text-gray-400 max-w-xl mx-auto">일본 생활 대시보드</p>
+      <div className="relative text-center py-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 via-pink-500/5 to-transparent rounded-2xl pointer-events-none" />
+        <div className="relative flex flex-col items-center gap-3">
+          <div className="relative">
+            <div className="absolute -inset-4 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 rounded-full blur-2xl opacity-60" />
+            <Image
+              src="/jp_logo_v2.png"
+              alt="Japan Life"
+              width={400}
+              height={100}
+              className="relative mx-auto h-20 sm:h-24 w-auto drop-shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+              priority
+            />
+          </div>
+          <p className="text-sm text-gray-500 tracking-widest uppercase font-medium">
+            Dashboard
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href="/checklist">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-emerald-500/30 transition-all h-full">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/10 p-4 hover:border-emerald-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">✅</span>
-              <span className="text-sm font-medium text-gray-400">체크리스트</span>
+              <span className="text-sm font-medium text-gray-400">
+                체크리스트
+              </span>
             </div>
-            <div className="text-2xl font-bold text-white mb-1">{checklistPct}%</div>
+            <div className="text-2xl font-bold text-white mb-1">
+              {checklistPct}%
+            </div>
             <div className="w-full h-1.5 rounded-full bg-white/10 mb-2">
               <div
                 className="h-full rounded-full bg-emerald-400 transition-all"
@@ -114,21 +149,25 @@ export default function DashboardClient() {
             <p className="text-xs text-gray-500">
               {checkedCount}/{totalChecklist} 완료
               {highPriorityLeft > 0 && (
-                <span className="text-amber-400 ml-1">({highPriorityLeft} 중요)</span>
+                <span className="text-amber-400 ml-1">
+                  ({highPriorityLeft} 중요)
+                </span>
               )}
             </p>
           </div>
         </Link>
 
         <Link href="/expenses">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-blue-500/30 transition-all h-full">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-transparent to-cyan-500/10 p-4 hover:border-blue-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">💰</span>
               <span className="text-sm font-medium text-gray-400">예산</span>
             </div>
             {budgetTotal > 0 ? (
               <>
-                <div className="text-2xl font-bold text-white mb-1">¥{budgetRemaining.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-white mb-1">
+                  ¥{budgetRemaining.toLocaleString()}
+                </div>
                 <p className="text-xs text-gray-500">
                   {monthSheetLoading
                     ? `${currentMonthLabel} 지출 불러오는 중...`
@@ -145,22 +184,32 @@ export default function DashboardClient() {
         </Link>
 
         <Link href="/concerts">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-purple-500/30 transition-all h-full">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-transparent to-pink-500/10 p-4 hover:border-purple-500/30 transition-all h-full">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">🎵</span>
               <span className="text-sm font-medium text-gray-400">콘서트</span>
             </div>
             {nextConcert ? (
               <>
-                <div className="text-sm font-bold text-white mb-1 truncate">{nextConcert.title}</div>
-                <p className="text-xs text-gray-500 truncate">{nextConcert.date} · {nextConcert.venue}</p>
-                <p className="text-xs text-purple-400 mt-1">{upcomingConcerts.length}개 예정</p>
+                <div className="text-sm font-bold text-white mb-1 truncate">
+                  {nextConcert.title}
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {nextConcert.date} · {nextConcert.venue}
+                </p>
+                <p className="text-xs text-purple-400 mt-1">
+                  {upcomingConcerts.length}개 예정
+                </p>
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold text-gray-600 mb-1">{concerts.length}</div>
+                <div className="text-2xl font-bold text-gray-600 mb-1">
+                  {concerts.length}
+                </div>
                 <p className="text-xs text-gray-500">
-                  {concerts.length > 0 ? "기록된 콘서트" : "콘서트를 추가해 주세요"}
+                  {concerts.length > 0
+                    ? "기록된 콘서트"
+                    : "콘서트를 추가해 주세요"}
                 </p>
               </>
             )}
@@ -168,37 +217,47 @@ export default function DashboardClient() {
         </Link>
 
         <Link href="/calculator#exchange-calculator">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 h-full hover:bg-white/10 hover:border-amber-500/30 transition-all">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">FX</span>
-              <span className="text-sm font-medium text-gray-400">환율</span>
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 p-4 h-full hover:border-amber-500/30 transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💱</span>
+                <span className="text-sm font-medium text-gray-400">환율</span>
+              </div>
+              {ratesLoading && (
+                <div className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin" />
+              )}
             </div>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">🇰🇷🇯🇵 KRW-JPY</span>
-                <span className="font-mono text-white">
-                  {ratesLoading || !liveRates
-                    ? "--"
-                    : liveRates.krwJpy.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                </span>
+            {ratesLoading || !liveRates ? (
+              <div className="text-2xl font-bold text-gray-600 mb-1">--</div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">JPY/KRW</span>
+                  <span className="text-sm font-mono font-bold text-white">
+                    {liveRates.krwJpy.toLocaleString("ko-KR", {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">USD/KRW</span>
+                  <span className="text-sm font-mono font-bold text-white">
+                    {liveRates.krwUsd.toLocaleString("ko-KR", {
+                      maximumFractionDigits: 1,
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">USD/JPY</span>
+                  <span className="text-sm font-mono font-bold text-white">
+                    {liveRates.jpyUsd.toLocaleString("ko-KR", {
+                      maximumFractionDigits: 1,
+                    })}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">🇰🇷🇺🇸 KRW-USD</span>
-                <span className="font-mono text-white">
-                  {ratesLoading || !liveRates
-                    ? "--"
-                    : liveRates.krwUsd.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">🇯🇵🇺🇸 JPY-USD</span>
-                <span className="font-mono text-white">
-                  {ratesLoading || !liveRates
-                    ? "--"
-                    : liveRates.jpyUsd.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </Link>
       </div>
@@ -270,8 +329,12 @@ export default function DashboardClient() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{artist.name}</p>
-                        <p className="text-xs text-gray-400">{artist.genres.join(", ")}</p>
+                        <p className="text-sm font-medium text-white truncate">
+                          {artist.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {artist.genres.join(", ")}
+                        </p>
                       </div>
                     </Link>
                     <FavoriteButton
@@ -286,9 +349,13 @@ export default function DashboardClient() {
                 ))}
               </div>
             )}
-            {!searching && searchResults.length === 0 && searchQuery.length >= 2 && (
-              <p className="p-4 text-sm text-gray-500 text-center">아티스트를 찾을 수 없습니다</p>
-            )}
+            {!searching &&
+              searchResults.length === 0 &&
+              searchQuery.length >= 2 && (
+                <p className="p-4 text-sm text-gray-500 text-center">
+                  아티스트를 찾을 수 없습니다
+                </p>
+              )}
           </div>
         )}
       </div>
@@ -339,7 +406,8 @@ export default function DashboardClient() {
                 const artworkUrl = getHighResArtwork(track.artworkUrl100, 120);
                 const releaseDate = new Date(track.releaseDate);
                 const isRecent =
-                  DASHBOARD_RENDER_TIME - releaseDate.getTime() < 30 * 24 * 60 * 60 * 1000;
+                  DASHBOARD_RENDER_TIME - releaseDate.getTime() <
+                  30 * 24 * 60 * 60 * 1000;
                 return (
                   <div
                     key={`${track.trackId}-${i}`}
@@ -356,7 +424,9 @@ export default function DashboardClient() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-white truncate">{track.trackName}</p>
+                        <p className="font-medium text-white truncate">
+                          {track.trackName}
+                        </p>
                         {isRecent && (
                           <span className="px-1.5 py-0.5 text-[10px] rounded bg-pink-500/20 text-pink-300 shrink-0">
                             NEW
@@ -384,7 +454,10 @@ export default function DashboardClient() {
                       {formatDuration(track.trackTimeMillis)}
                     </span>
                     <div className="shrink-0">
-                      <MusicButton trackName={track.trackName} artistName={track.artistName} />
+                      <MusicButton
+                        trackName={track.trackName}
+                        artistName={track.artistName}
+                      />
                     </div>
                   </div>
                 );
@@ -392,15 +465,21 @@ export default function DashboardClient() {
             </div>
           )}
           {!releasesLoading && newReleases.length === 0 && (
-            <p className="text-gray-500 text-center py-4">발매 정보가 없습니다.</p>
+            <p className="text-gray-500 text-center py-4">
+              발매 정보가 없습니다.
+            </p>
           )}
         </section>
       )}
 
       {favorites.length === 0 && (
         <section className="text-center py-10 rounded-xl border border-dashed border-white/10">
-          <p className="text-gray-300 text-lg mb-2">위에서 아티스트를 검색하고 즐겨찾기에 추가하세요</p>
-          <p className="text-gray-500 text-sm">최신 발매 정보가 여기에 표시됩니다</p>
+          <p className="text-gray-300 text-lg mb-2">
+            위에서 아티스트를 검색하고 즐겨찾기에 추가하세요
+          </p>
+          <p className="text-gray-500 text-sm">
+            최신 발매 정보가 여기에 표시됩니다
+          </p>
         </section>
       )}
     </div>

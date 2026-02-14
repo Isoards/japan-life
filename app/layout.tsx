@@ -26,8 +26,8 @@ export const metadata: Metadata = {
     title: "Japan Life",
   },
   icons: {
-    icon: "/jp_icon.png",
-    apple: "/jp_icon.png",
+    icon: "/jp_icon_v2.png",
+    apple: "/jp_icon_v2.png",
   },
 };
 
