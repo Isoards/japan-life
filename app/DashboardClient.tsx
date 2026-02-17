@@ -112,6 +112,32 @@ export default function DashboardClient() {
     [concerts],
   );
 
+  const DEPARTURE_DATE = new Date("2026-03-18T00:00:00+09:00");
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { dDay, isInJapan, days, hours, minutes, seconds } = useMemo(() => {
+    const diff = DEPARTURE_DATE.getTime() - now.getTime();
+    const inJapan = diff <= 0;
+    const absDiff = Math.abs(diff);
+    const d = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const m = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((absDiff % (1000 * 60)) / 1000);
+    return {
+      dDay: inJapan ? `+${d}` : `-${d}`,
+      isInJapan: inJapan,
+      days: d,
+      hours: h,
+      minutes: m,
+      seconds: s,
+    };
+  }, [now]);
+
   return (
     <div className="space-y-10">
       <div className="relative text-center py-6">
@@ -130,6 +156,43 @@ export default function DashboardClient() {
           </div>
           <p className="text-sm text-gray-500 tracking-widest uppercase font-medium">
             Dashboard
+          </p>
+        </div>
+      </div>
+
+      {/* D-day 타이머 */}
+      <div className="relative rounded-2xl border border-white/10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-sky-500/10" />
+        <div className="relative px-5 py-6 text-center">
+          <p className="text-xs text-gray-400 tracking-widest uppercase mb-2">
+            {isInJapan ? "일본 생활" : "도일까지"}
+          </p>
+          <div className="flex items-center justify-center gap-1 mb-3">
+            <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-sky-400">
+              D{dDay}
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-3 sm:gap-5">
+            {[
+              { value: days, label: "일" },
+              { value: hours, label: "시간" },
+              { value: minutes, label: "분" },
+              { value: seconds, label: "초" },
+            ].map((unit) => (
+              <div key={unit.label} className="flex flex-col items-center">
+                <span className="text-xl sm:text-2xl font-mono font-bold text-white tabular-nums">
+                  {String(unit.value).padStart(2, "0")}
+                </span>
+                <span className="text-[10px] text-gray-500 mt-0.5">
+                  {unit.label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            {isInJapan
+              ? `${DEPARTURE_DATE.toLocaleDateString("ko-KR")} 도일`
+              : `${DEPARTURE_DATE.toLocaleDateString("ko-KR")} 출발 예정`}
           </p>
         </div>
       </div>
