@@ -164,11 +164,14 @@ function NotesTab() {
         <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filter === "all" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
           전체 ({notes.length})
         </button>
-        {NOTE_CATEGORIES.map((cat) => (
-          <button key={cat.key} onClick={() => setFilter(cat.key)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filter === cat.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
-            {cat.icon} {cat.label}
-          </button>
-        ))}
+        {NOTE_CATEGORIES.map((cat) => {
+          const count = notes.filter((n) => n.category === cat.key).length;
+          return (
+            <button key={cat.key} onClick={() => setFilter(cat.key)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filter === cat.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
+              {cat.icon} {cat.label} ({count})
+            </button>
+          );
+        })}
         <button onClick={() => { resetForm(); setShowForm(true); }} className="ml-auto px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors">
           + 추가
         </button>
@@ -197,29 +200,33 @@ function NotesTab() {
       )}
 
       {/* Notes list */}
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filtered.map((note) => {
           const cat = NOTE_CATEGORIES.find((c) => c.key === note.category);
           return (
-            <div key={note.id} className="flex items-start gap-3 p-3 rounded-lg border border-white/10 bg-white/5 group">
-              <span className="text-lg shrink-0 mt-0.5">{cat?.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-medium text-white">{note.japanese}</div>
-                {note.reading && <div className="text-xs text-purple-400">{note.reading}</div>}
-                <div className="text-sm text-gray-400 mt-0.5">{note.korean}</div>
-                {note.memo && <div className="text-xs text-gray-600 mt-1">{note.memo}</div>}
+            <div key={note.id} className="relative p-5 rounded-xl border border-white/10 bg-white/5 group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{cat?.icon} {cat?.label}</span>
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEdit(note)} className="text-gray-500 hover:text-purple-400 transition-colors p-1" title="수정">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button onClick={() => setDeleteTarget(note.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1" title="삭제">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => startEdit(note)} className="text-gray-500 hover:text-purple-400 transition-colors p-1" title="수정">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button onClick={() => setDeleteTarget(note.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1" title="삭제">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+              <div className="text-center space-y-2">
+                <div className="text-2xl font-bold text-white leading-snug">{note.japanese}</div>
+                {note.reading && <div className="text-base text-purple-400">{note.reading}</div>}
+                <div className="border-t border-white/10 pt-2 mt-2">
+                  <div className="text-lg text-gray-300">{note.korean}</div>
+                </div>
+                {note.memo && <div className="text-sm text-gray-500 mt-1">{note.memo}</div>}
               </div>
             </div>
           );

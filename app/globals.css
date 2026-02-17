@@ -85,3 +85,22 @@ body {
 .concert-calendar .react-calendar__month-view__days__day--neighboringMonth {
   color: #4b5563;
 }
+
+/* 일요일/공휴일 빨간색 */
+.concert-calendar .calendar-holiday {
+  color: #f87171 !important;
+}
+
+/* 토요일 파란색 */
+.concert-calendar .calendar-saturday {
+  color: #60a5fa !important;
+}
+
+/* 요일 헤더: 일요일 빨강, 토요일 파랑 */
+.concert-calendar .react-calendar__month-view__weekdays__weekday:first-child {
+  color: #f87171;
+}
+
+.concert-calendar .react-calendar__month-view__weekdays__weekday:last-child {
+  color: #60a5fa;
+}

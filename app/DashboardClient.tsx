@@ -16,7 +16,13 @@ import {
   useSearch,
   useLiveExchangeRates,
   useSheetsSummary,
+  useWeather,
+  useGarbageSchedule,
+  usePackages,
 } from "@/lib/hooks/use-api";
+import { getUpcomingHolidays } from "@/lib/constants/holidays";
+import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather";
+import { DAY_LABELS } from "@/lib/constants/garbage";
 
 const DASHBOARD_RENDER_TIME = Date.now();
 
@@ -112,6 +118,27 @@ export default function DashboardClient() {
     [concerts],
   );
 
+  const { data: weather, isLoading: weatherLoading } = useWeather();
+  const { data: garbageSchedule } = useGarbageSchedule();
+  const { data: packages = [] } = usePackages();
+
+  const upcomingHolidays = useMemo(() => getUpcomingHolidays(3), []);
+
+  const garbageToday = useMemo(() => {
+    const today = new Date().getDay();
+    return garbageSchedule?.entries.filter((e) => e.dayOfWeek.includes(today)) ?? [];
+  }, [garbageSchedule]);
+
+  const garbageTomorrow = useMemo(() => {
+    const tomorrow = (new Date().getDay() + 1) % 7;
+    return garbageSchedule?.entries.filter((e) => e.dayOfWeek.includes(tomorrow)) ?? [];
+  }, [garbageSchedule]);
+
+  const activePackages = useMemo(
+    () => packages.filter((p) => p.status !== "delivered" && p.status !== "returned"),
+    [packages],
+  );
+
   const DEPARTURE_DATE = new Date("2026-03-18T00:00:00+09:00");
 
   const [now, setNow] = useState(() => new Date());
@@ -195,6 +222,45 @@ export default function DashboardClient() {
               : `${DEPARTURE_DATE.toLocaleDateString("ko-KR")} 출발 예정`}
           </p>
         </div>
+      </div>
+
+      {/* 날씨 위젯 */}
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-sky-500/10 via-transparent to-blue-500/10 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">🌤️</span>
+          <span className="text-sm font-medium text-gray-400">도치기현 날씨</span>
+          {weatherLoading && (
+            <div className="w-3 h-3 border border-sky-400 border-t-transparent rounded-full animate-spin ml-auto" />
+          )}
+        </div>
+        {weather ? (
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl">{weatherCodeToEmoji(weather.current.weatherCode)}</span>
+              <div>
+                <div className="text-2xl font-bold text-white">{Math.round(weather.current.temperature)}°</div>
+                <p className="text-xs text-gray-500">{weatherCodeToLabel(weather.current.weatherCode)} · 습도 {weather.current.humidity}%</p>
+              </div>
+            </div>
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto flex-1 justify-end">
+              {weather.daily.slice(1).map((day) => (
+                <div key={day.date} className="flex flex-col items-center gap-0.5 shrink-0">
+                  <span className="text-[10px] text-gray-500">
+                    {DAY_LABELS[new Date(day.date + "T00:00:00+09:00").getDay()]}
+                  </span>
+                  <span className="text-base">{weatherCodeToEmoji(day.weatherCode)}</span>
+                  <span className="text-xs text-white font-mono">{Math.round(day.tempMax)}°</span>
+                  <span className="text-[10px] text-gray-500 font-mono">{Math.round(day.tempMin)}°</span>
+                  {day.precipitationProbability > 0 && (
+                    <span className="text-[10px] text-sky-400">{day.precipitationProbability}%</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !weatherLoading ? (
+          <p className="text-gray-600 text-sm">날씨 정보를 불러올 수 없습니다</p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -326,6 +392,105 @@ export default function DashboardClient() {
                   </span>
                 </div>
               </div>
+            )}
+          </div>
+        </Link>
+      </div>
+
+      {/* 공휴일 / 쓰레기 / 택배 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 공휴일 */}
+        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-red-500/10 via-transparent to-orange-500/10 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🎌</span>
+            <span className="text-sm font-medium text-gray-400">다가오는 공휴일</span>
+          </div>
+          {upcomingHolidays.length > 0 ? (
+            <div className="space-y-1.5">
+              {upcomingHolidays.map((h) => (
+                <div key={h.date} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white truncate">{h.nameKo}</p>
+                    <p className="text-[10px] text-gray-500">{h.name}</p>
+                  </div>
+                  <span className="text-xs text-gray-500 font-mono shrink-0">{h.date.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 text-sm">올해 남은 공휴일이 없습니다</p>
+          )}
+        </div>
+
+        {/* 쓰레기 */}
+        <Link href="/garbage">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-transparent to-lime-500/10 p-4 hover:border-emerald-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">🗑️</span>
+              <span className="text-sm font-medium text-gray-400">쓰레기 수거</span>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] text-gray-500 mb-0.5">오늘</p>
+                {garbageToday.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {garbageToday.map((g) => (
+                      <span key={g.type} className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                        {g.icon} {g.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">수거 없음</p>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500 mb-0.5">내일</p>
+                {garbageTomorrow.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {garbageTomorrow.map((g) => (
+                      <span key={g.type} className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                        {g.icon} {g.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">수거 없음</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* 택배 */}
+        <Link href="/packages">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-4 hover:border-indigo-500/30 transition-all h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">📦</span>
+              <span className="text-sm font-medium text-gray-400">택배</span>
+            </div>
+            {activePackages.length > 0 ? (
+              <>
+                <div className="text-2xl font-bold text-white mb-1">
+                  {activePackages.length}건
+                </div>
+                <p className="text-xs text-gray-500">배송 진행 중</p>
+                <div className="mt-2 space-y-1">
+                  {activePackages.slice(0, 2).map((p) => (
+                    <p key={p.id} className="text-xs text-indigo-400 truncate">
+                      {p.description}
+                    </p>
+                  ))}
+                  {activePackages.length > 2 && (
+                    <p className="text-xs text-gray-500">+{activePackages.length - 2}건 더</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-gray-600 mb-1">0</div>
+                <p className="text-xs text-gray-500">추적 중인 택배 없음</p>
+              </>
             )}
           </div>
         </Link>

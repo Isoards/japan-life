@@ -14,6 +14,7 @@ import "react-calendar/dist/Calendar.css";
 import { UserConcert } from "@/lib/userConcerts";
 import { getNextMilestone } from "@/lib/milestoneUtils";
 import { useConcerts, mutateAPI } from "@/lib/hooks/use-api";
+import { HOLIDAYS_2026 } from "@/lib/constants/holidays";
 import { useToast } from "@/components/Toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -44,6 +45,14 @@ export default function ConcertsPage() {
     }
     return dates;
   }, [concerts]);
+
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const h of HOLIDAYS_2026) {
+      map.set(new Date(h.date).toDateString(), h.nameKo);
+    }
+    return map;
+  }, []);
 
   const selectedConcerts = useMemo(() => {
     if (!selectedDate) return [];
@@ -136,14 +145,30 @@ export default function ConcertsPage() {
   };
 
   const tileContent = ({ date, view: v }: { date: Date; view: string }) => {
-    if (v === "month" && concertDates.has(date.toDateString())) {
-      return (
-        <div className="flex justify-center mt-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
-        </div>
-      );
-    }
-    return null;
+    if (v !== "month") return null;
+    const hasConcert = concertDates.has(date.toDateString());
+    const holidayName = holidayMap.get(date.toDateString());
+    return (
+      <div className="flex flex-col items-center">
+        {hasConcert && (
+          <div className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-1" />
+        )}
+        {holidayName && (
+          <span className="text-[8px] leading-tight text-red-400 truncate max-w-full mt-0.5">
+            {holidayName}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const tileClassName = ({ date, view: v }: { date: Date; view: string }) => {
+    if (v !== "month") return "";
+    const day = date.getDay();
+    const isHoliday = holidayMap.has(date.toDateString());
+    if (isHoliday || day === 0) return "calendar-holiday";
+    if (day === 6) return "calendar-saturday";
+    return "";
   };
 
   if (error) {
@@ -324,6 +349,12 @@ export default function ConcertsPage() {
               onChange={(value) => setSelectedDate(value as Date)}
               value={selectedDate}
               tileContent={tileContent}
+              tileClassName={tileClassName}
+              locale="ko-KR"
+              calendarType="gregory"
+              formatShortWeekday={(_locale, date) =>
+                ["일", "월", "화", "수", "목", "금", "토"][date.getDay()]
+              }
               className="!bg-transparent !border-none w-full"
             />
           </div>

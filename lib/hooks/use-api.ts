@@ -9,6 +9,10 @@ import type {
   KaraokeSong,
   SheetsSummary,
   WeeklyLog,
+  WeatherData,
+  GarbageScheduleData,
+  PackageEntry,
+  MonthlyTrend,
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
@@ -128,6 +132,34 @@ export function useSearch(query: string | null) {
       ? `/api/search?q=${encodeURIComponent(query)}`
       : null,
     fetcher,
+  );
+}
+
+export function useWeather() {
+  return useSWR<WeatherData>("/api/weather", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 900_000,
+  });
+}
+
+export function useGarbageSchedule() {
+  return useSWR<GarbageScheduleData>("/api/garbage", fetcher, {
+    revalidateOnFocus: false,
+  });
+}
+
+export function usePackages() {
+  return useSWR<PackageEntry[]>("/api/packages", fetcher, {
+    fallbackData: [],
+    revalidateOnFocus: false,
+  });
+}
+
+export function useSheetsTrend(months = 6) {
+  return useSWR<MonthlyTrend[]>(
+    `/api/sheets/trend?months=${months}`,
+    fetcher,
+    { revalidateOnFocus: false },
   );
 }
 

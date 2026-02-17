@@ -14,6 +14,8 @@ const navLinks = [
   { href: "/expenses", label: "가계부" },
   { href: "/notes", label: "메모" },
   { href: "/logs", label: "주간 로그" },
+  { href: "/garbage", label: "쓰레기" },
+  { href: "/packages", label: "택배" },
 ];
 
 export default function Navbar() {

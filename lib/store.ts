@@ -19,6 +19,8 @@ const STORE_VERSIONS: Record<string, number> = {
   links: 1,
   "user-concerts": 2,
   logs: 1,
+  garbage: 1,
+  packages: 1,
 };
 
 /**

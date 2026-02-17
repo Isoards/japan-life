@@ -149,3 +149,86 @@ export interface KaraokeSong {
   lyricist: string;
   release: string;
 }
+
+// ── Weather ──
+
+export interface WeatherCurrent {
+  temperature: number;
+  weatherCode: number;
+  humidity: number;
+  windSpeed: number;
+}
+
+export interface WeatherDaily {
+  date: string;
+  weatherCode: number;
+  tempMax: number;
+  tempMin: number;
+  precipitationProbability: number;
+}
+
+export interface WeatherData {
+  current: WeatherCurrent;
+  daily: WeatherDaily[];
+  fetchedAt: string;
+}
+
+// ── Garbage ──
+
+export type GarbageType =
+  | "burnable"
+  | "non-burnable"
+  | "recyclable"
+  | "pet-bottles"
+  | "plastic"
+  | "paper"
+  | "cans-bottles";
+
+export interface GarbageScheduleEntry {
+  type: GarbageType;
+  label: string;
+  labelJa: string;
+  icon: string;
+  dayOfWeek: number[];
+  frequency?: "weekly" | "biweekly" | "monthly";
+  note?: string;
+}
+
+export interface GarbageScheduleData {
+  entries: GarbageScheduleEntry[];
+  region?: string;
+}
+
+// ── Packages ──
+
+export type PackageCarrier =
+  | "yamato"
+  | "sagawa"
+  | "japan-post"
+  | "ems"
+  | "dhl"
+  | "fedex"
+  | "other";
+
+export type PackageStatus = "pending" | "in-transit" | "delivered" | "returned";
+
+export interface PackageEntry {
+  id: string;
+  trackingNumber: string;
+  carrier: PackageCarrier;
+  description: string;
+  status: PackageStatus;
+  createdAt: string;
+  deliveredAt?: string;
+  memo?: string;
+}
+
+// ── Monthly Trend ──
+
+export interface MonthlyTrend {
+  month: string;
+  totalExpense: number;
+  totalIncome: number;
+  totalSaving: number;
+  byCategory: Record<string, number>;
+}

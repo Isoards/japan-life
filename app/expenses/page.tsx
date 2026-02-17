@@ -1,12 +1,23 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
 import { getDefaultBudget } from "@/lib/calculator";
-import { mutateAPI, useBudget, useSheetsSummary } from "@/lib/hooks/use-api";
+import { mutateAPI, useBudget, useSheetsSummary, useSheetsTrend } from "@/lib/hooks/use-api";
+import { INCOME_CATEGORIES, SAVING_CATEGORIES } from "@/lib/constants/budget";
 import type { BudgetCategory, SinkingFund } from "@/lib/types";
 
-type Tab = "budget" | "sheet";
+const MonthlyTrendChart = dynamic(
+  () => import("@/components/ExpenseCharts").then((m) => m.MonthlyTrendChart),
+  { ssr: false },
+);
+const CategoryPieChart = dynamic(
+  () => import("@/components/ExpenseCharts").then((m) => m.CategoryPieChart),
+  { ssr: false },
+);
+
+type Tab = "budget" | "sheet" | "charts";
 
 function getUsageLevel(actual: number, budget: number): "safe" | "warn" | "danger" {
   if (budget <= 0) return "safe";
@@ -32,6 +43,7 @@ export default function ExpensesPage() {
         {([
           { key: "budget", label: "🏠 예산 플래너" },
           { key: "sheet", label: "📤 가계부 시트" },
+          { key: "charts", label: "📊 지출 차트" },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -47,6 +59,7 @@ export default function ExpensesPage() {
 
       {tab === "budget" && <BudgetTab />}
       {tab === "sheet" && <SheetTab />}
+      {tab === "charts" && <ChartsTab />}
     </div>
   );
 }
@@ -505,6 +518,56 @@ function SheetTab() {
       <div className="rounded-xl border border-white/10 overflow-hidden" style={{ height: "700px" }}>
         <iframe src={embedUrl} style={{ width: "100%", height: "100%", border: "none" }} title="가계부 스프레드시트" />
       </div>
+    </div>
+  );
+}
+
+function ChartsTab() {
+  const { data: trend, isLoading: trendLoading } = useSheetsTrend(6);
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const { data: currentSheet, isLoading: sheetLoading } = useSheetsSummary(currentMonth);
+
+  const excludeCategories = useMemo(
+    () => new Set([...INCOME_CATEGORIES, ...SAVING_CATEGORIES]),
+    [],
+  );
+
+  const expenseOnly = useMemo(() => {
+    if (!currentSheet?.byCategory) return {};
+    return Object.fromEntries(
+      Object.entries(currentSheet.byCategory).filter(
+        ([key]) => !excludeCategories.has(key),
+      ),
+    );
+  }, [currentSheet, excludeCategories]);
+
+  const isLoading = trendLoading || sheetLoading;
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <div className="inline-block w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {trend && <MonthlyTrendChart data={trend} />}
+      {currentSheet && (
+        <>
+          <p className="text-sm text-gray-500 text-center">
+            {currentMonth} 카테고리별 지출
+          </p>
+          <CategoryPieChart byCategory={expenseOnly} />
+        </>
+      )}
+      {!trend?.length && !currentSheet && (
+        <p className="text-gray-500 text-center py-8">
+          Google Sheets에 데이터가 없거나 API 키가 설정되지 않았습니다.
+        </p>
+      )}
     </div>
   );
 }

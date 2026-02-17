@@ -127,6 +127,43 @@ export const idSchema = z.object({
   id: z.string().min(1),
 });
 
+// ── Garbage ──
+
+export const garbageEntrySchema = z.object({
+  type: z.string().min(1),
+  label: z.string().min(1),
+  labelJa: z.string().min(1),
+  icon: z.string(),
+  dayOfWeek: z.array(z.number().min(0).max(6)),
+  frequency: z.enum(["weekly", "biweekly", "monthly"]).optional(),
+  note: z.string().optional(),
+});
+
+export const garbageScheduleSchema = z.object({
+  entries: z.array(garbageEntrySchema),
+  region: z.string().optional(),
+});
+
+// ── Packages ──
+
+export const packageSchema = z.object({
+  trackingNumber: z.string().min(1),
+  carrier: z.enum(["yamato", "sagawa", "japan-post", "ems", "dhl", "fedex", "other"]),
+  description: z.string().min(1),
+  status: z.enum(["pending", "in-transit", "delivered", "returned"]).optional().default("pending"),
+  memo: z.string().optional(),
+});
+
+export const packagePatchSchema = z.object({
+  id: z.string().min(1),
+  trackingNumber: z.string().min(1).optional(),
+  carrier: z.enum(["yamato", "sagawa", "japan-post", "ems", "dhl", "fedex", "other"]).optional(),
+  description: z.string().min(1).optional(),
+  status: z.enum(["pending", "in-transit", "delivered", "returned"]).optional(),
+  memo: z.string().optional(),
+  deliveredAt: z.string().optional(),
+});
+
 /** Parse with zod - returns data or a string error message. */
 export function parseOrError<T>(schema: z.ZodType<T>, data: unknown): { ok: true; data: T } | { ok: false; error: string } {
   const result = schema.safeParse(data);
