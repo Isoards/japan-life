@@ -1,6 +1,7 @@
 services:
   japan-life:
     image: isoards/japan-life:latest
+    platform: linux/amd64
     container_name: japan-life
     ports:
       - "3000:3000"
