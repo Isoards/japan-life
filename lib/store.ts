@@ -14,7 +14,7 @@ type Migration = (data: unknown) => unknown;
 const STORE_VERSIONS: Record<string, number> = {
   budget: 3,
   checklist: 1,
-  notes: 1,
+  notes: 2,
   favorites: 1,
   links: 1,
   "user-concerts": 2,
@@ -28,6 +28,52 @@ const STORE_VERSIONS: Record<string, number> = {
  * 예: budget v1 → v2: sheetCategories 필드 보장
  */
 const MIGRATIONS: Record<string, Record<number, Migration>> = {
+  notes: {
+    1: (data: unknown) => {
+      if (!Array.isArray(data)) return data;
+
+      // Honda 고유 용어 (회사문화/이름/툴) → business로 병합
+      const HONDA_SPECIFIC_JP = [
+        "本田技研工業", "三つの喜び", "ワイガヤ", "社内ツール",
+        "デンソーテン", "エーアンドデイ",
+      ];
+
+      // SW/시험/안전/보안 관련 키워드 → sw
+      const SW_JP = [
+        "組み込み", "リアルタイム", "タスク", "割り込み", "制御周期",
+        "サンプリング周期", "デバッグ", "静的解析", "単体試験", "結合試験",
+        "システム試験", "回帰試験", "リリース", "コンパイル", "ビルド",
+        "バージョン管理", "差分", "不具合", "原因解析", "対策",
+        "機能安全", "ISO 26262", "ASIL", "HARA", "FMEA", "FTA",
+        "冗長化", "フェイルセーフ", "ウォッチドッグ",
+        "サイバーセキュリティ", "ISO/SAE 21434", "脆弱性", "脅威", "TARA",
+        "暗号化", "認証", "OTA",
+        "UDS", "OBD", "CAN FD", "LIN", "車載イーサネット",
+        "EMC", "ノイズ", "計測", "校正",
+      ];
+
+      return data.map((note: Record<string, unknown>) => {
+        const cat = note.category as string;
+        const jp = (note.japanese as string) || "";
+
+        if (cat === "honda") {
+          if (HONDA_SPECIFIC_JP.some((kw) => jp.includes(kw))) {
+            return { ...note, category: "business" };
+          }
+          return { ...note, category: "ev" };
+        }
+
+        if (cat === "other") {
+          if (SW_JP.some((kw) => jp.includes(kw))) {
+            return { ...note, category: "sw" };
+          }
+          return { ...note, category: "vehicle" };
+        }
+
+        return note;
+      });
+    },
+  },
   "user-concerts": {
     1: (data: unknown) => {
       if (!Array.isArray(data)) return data;

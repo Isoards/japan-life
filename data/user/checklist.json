@@ -12,7 +12,7 @@
     "category": "pre-departure",
     "title": "영문 운전면허증 발급",
     "description": "면허시험장에서 영문면허 발급 (일본 면허 키리카에용)",
-    "checked": false,
+    "checked": true,
     "priority": "high"
   },
   {
@@ -20,7 +20,7 @@
     "category": "pre-departure",
     "title": "핸드폰 알뜰폰 전환",
     "description": "본인인증용 번호 유지. 가장 저렴한 요금제(월5천원 이하)로 변경",
-    "checked": false,
+    "checked": true,
     "priority": "medium"
   },
   {
@@ -46,14 +46,6 @@
     "description": "일본 거주자 신분 시 세금 복잡성 방지를 위해 현금화",
     "checked": true,
     "priority": "high"
-  },
-  {
-    "id": "pre-7",
-    "category": "pre-departure",
-    "title": "청약통장/예금 유지 확인",
-    "description": "청약통장 기간 유지, 예금(7월 만기) 확인",
-    "checked": false,
-    "priority": "low"
   },
   {
     "id": "pre-8",
@@ -172,7 +164,7 @@
     "category": "workplace",
     "title": "통근 경로 확인",
     "description": "자택에서 회사까지 교통수단 및 소요시간 확인, 정기권 구매",
-    "checked": false,
+    "checked": true,
     "priority": "medium"
   },
   {

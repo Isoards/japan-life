@@ -111,7 +111,7 @@ export interface GuideItem {
   linkedChecklist?: string[];
 }
 
-export type NoteCategory = "business" | "honda" | "daily" | "other";
+export type NoteCategory = "business" | "ev" | "vehicle" | "daily" | "sw";
 
 export interface Note {
   id: string;

@@ -21,7 +21,8 @@
       "Bash(grep:*)",
       "Bash(npm uninstall:*)",
       "Bash(cat:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(wc:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\SW융합인재센터 04\\Documents\\japan-life\\app\\concerts"

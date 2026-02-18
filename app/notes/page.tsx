@@ -1,18 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { NoteCategory, Note } from "@/lib/types";
 import { useNotes, useLinks, mutateAPI } from "@/lib/hooks/use-api";
 import { useToast } from "@/components/Toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import {
+  loadSrs, saveSrs, getDueNotes, updateSrs,
+  loadQuizStats, saveQuizStats, updateQuizStats,
+  type SrsState, type QuizStats,
+} from "@/lib/srs";
 
 type Tab = "notes" | "templates" | "quiz" | "links";
 
 const NOTE_CATEGORIES: { key: NoteCategory; label: string; icon: string }[] = [
   { key: "business", label: "비즈니스", icon: "💼" },
-  { key: "honda", label: "Honda 용어", icon: "🏭" },
+  { key: "ev", label: "전동/EV", icon: "⚡" },
+  { key: "vehicle", label: "차량 부품", icon: "🚗" },
   { key: "daily", label: "일상 표현", icon: "🗣️" },
-  { key: "other", label: "기타", icon: "📝" },
+  { key: "sw", label: "SW/시험", icon: "💻" },
 ];
 
 export default function NotesPage() {
@@ -52,6 +58,16 @@ export default function NotesPage() {
       {tab === "links" && <LinksTab />}
     </div>
   );
+}
+
+/* ──── Fisher-Yates 셔플 ──── */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 /* ──── 일본어 메모 ──── */
@@ -115,14 +131,19 @@ function NotesTab() {
     setDeleteTarget(null);
   };
 
-  const filtered = notes
-    .filter((n) => filter === "all" || n.category === filter)
-    .filter((n) =>
-      search === "" ||
-      n.japanese.includes(search) ||
-      n.korean.includes(search) ||
-      (n.reading && n.reading.includes(search))
-    );
+  // 검색/필터 없을 때 랜덤 순서로 표시, 검색 중일 때는 원래 순서 유지
+  const filtered = useMemo(() => {
+    const result = notes
+      .filter((n) => filter === "all" || n.category === filter)
+      .filter((n) =>
+        search === "" ||
+        n.japanese.includes(search) ||
+        n.korean.includes(search) ||
+        (n.reading && n.reading.includes(search))
+      );
+    return search ? result : shuffle(result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, filter, search]);
 
   if (loading) return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;
 
@@ -243,80 +264,21 @@ function NotesTab() {
 
 /* ──── SRS 퀴즈 ──── */
 
-interface SrsState {
-  [noteId: string]: {
-    interval: number; // days until next review
-    easeFactor: number; // SM-2 ease factor
-    nextReview: string; // ISO date
-    repetitions: number;
-  };
-}
-
-const SRS_KEY = "japan-life-srs";
-
-function loadSrs(): SrsState {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(SRS_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveSrs(state: SrsState) {
-  localStorage.setItem(SRS_KEY, JSON.stringify(state));
-}
-
-function getDueNotes(notes: Note[], srs: SrsState): Note[] {
-  const today = new Date().toISOString().slice(0, 10);
-  return notes.filter((n) => {
-    const s = srs[n.id];
-    if (!s) return true; // never reviewed = due
-    return s.nextReview <= today;
-  });
-}
-
-function updateSrs(srs: SrsState, noteId: string, quality: number): SrsState {
-  const prev = srs[noteId] || { interval: 0, easeFactor: 2.5, nextReview: "", repetitions: 0 };
-  let { interval, easeFactor, repetitions } = prev;
-
-  if (quality < 3) {
-    // forgot — reset
-    repetitions = 0;
-    interval = 1;
-  } else {
-    repetitions += 1;
-    if (repetitions === 1) interval = 1;
-    else if (repetitions === 2) interval = 3;
-    else interval = Math.round(interval * easeFactor);
-
-    easeFactor = Math.max(1.3, easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-  }
-
-  const next = new Date();
-  next.setDate(next.getDate() + interval);
-
-  return {
-    ...srs,
-    [noteId]: {
-      interval,
-      easeFactor,
-      nextReview: next.toISOString().slice(0, 10),
-      repetitions,
-    },
-  };
-}
-
 function QuizTab() {
   const { data: notes = [], isLoading } = useNotes();
   const [srs, setSrs] = useState<SrsState>(loadSrs);
+  const [quizStats, setQuizStats] = useState<QuizStats>(loadQuizStats);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [filterCat, setFilterCat] = useState<NoteCategory | "all">("all");
   const [sessionStats, setSessionStats] = useState({ total: 0, correct: 0 });
+  const [direction, setDirection] = useState<"ja-to-ko" | "ko-to-ja">("ja-to-ko");
 
-  const filtered = filterCat === "all" ? notes : notes.filter((n) => n.category === filterCat);
-  const dueNotes = getDueNotes(filtered, srs);
+  const filtered = useMemo(() => {
+    return filterCat === "all" ? notes : notes.filter((n) => n.category === filterCat);
+  }, [notes, filterCat]);
+
+  const dueNotes = useMemo(() => getDueNotes(filtered, srs), [filtered, srs]);
   const current = dueNotes[currentIndex];
 
   const handleAnswer = (quality: number) => {
@@ -325,13 +287,17 @@ function QuizTab() {
     setSrs(newSrs);
     saveSrs(newSrs);
 
+    const correct = quality >= 3;
     setSessionStats((prev) => ({
       total: prev.total + 1,
-      correct: quality >= 3 ? prev.correct + 1 : prev.correct,
+      correct: correct ? prev.correct + 1 : prev.correct,
     }));
 
+    const newStats = updateQuizStats(quizStats, current.category, correct);
+    setQuizStats(newStats);
+    saveQuizStats(newStats);
+
     setShowAnswer(false);
-    // Move to next, but since dueNotes will recompute, keep index or reset
     if (currentIndex >= dueNotes.length - 1) {
       setCurrentIndex(0);
     }
@@ -355,17 +321,64 @@ function QuizTab() {
     );
   }
 
-  // Recompute due notes after state change
   const activeDue = getDueNotes(filtered, srs);
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
-        메모에 저장한 일본어 표현을 SRS(간격 반복) 방식으로 복습합니다. 일본어를 보고 뜻을 떠올린 뒤 난이도를 평가하세요.
+        메모에 저장한 일본어 표현을 SRS(간격 반복) 방식으로 복습합니다.
       </p>
 
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2">
+      {/* Stats bar */}
+      {quizStats.totalReviewed > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="flex flex-wrap gap-4 text-xs">
+            <div className="text-center">
+              <div className="text-lg font-bold text-orange-400">{quizStats.streakDays}</div>
+              <div className="text-gray-500">연속 학습일</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{quizStats.totalReviewed}</div>
+              <div className="text-gray-500">누적 복습</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-emerald-400">
+                {quizStats.totalReviewed > 0 ? Math.round((quizStats.totalCorrect / quizStats.totalReviewed) * 100) : 0}%
+              </div>
+              <div className="text-gray-500">정답률</div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-gray-500 mb-1.5">카테고리별</div>
+              <div className="space-y-1">
+                {NOTE_CATEGORIES.map((cat) => {
+                  const cs = quizStats.byCategory[cat.key];
+                  if (!cs || cs.reviewed === 0) return null;
+                  const pct = Math.round((cs.correct / cs.reviewed) * 100);
+                  return (
+                    <div key={cat.key} className="flex items-center gap-2">
+                      <span className="w-16 truncate text-gray-400">{cat.icon} {cat.label}</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500/60" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-gray-500 w-8 text-right">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direction toggle + Category filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setDirection(direction === "ja-to-ko" ? "ko-to-ja" : "ja-to-ko")}
+          className="px-3 py-1.5 rounded-lg text-sm bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors"
+        >
+          {direction === "ja-to-ko" ? "🇯🇵 → 🇰🇷" : "🇰🇷 → 🇯🇵"}
+        </button>
+        <div className="w-px h-5 bg-white/10" />
         <button
           onClick={() => { setFilterCat("all"); setCurrentIndex(0); setShowAnswer(false); }}
           className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filterCat === "all" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
@@ -400,21 +413,42 @@ function QuizTab() {
           </div>
 
           {/* Question */}
-          <div className="text-2xl font-bold text-white py-4">
-            {activeDue[currentIndex].japanese}
-          </div>
-          {activeDue[currentIndex].reading && (
-            <div className="text-sm text-purple-400">
-              {activeDue[currentIndex].reading}
+          {direction === "ja-to-ko" ? (
+            <>
+              <div className="text-2xl font-bold text-white py-4">
+                {activeDue[currentIndex].japanese}
+              </div>
+              {activeDue[currentIndex].reading && (
+                <div className="text-sm text-purple-400">
+                  {activeDue[currentIndex].reading}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-white py-4">
+              {activeDue[currentIndex].korean}
             </div>
           )}
 
           {/* Answer */}
           {showAnswer ? (
             <div className="space-y-4">
-              <div className="text-lg text-emerald-400 font-medium py-2">
-                {activeDue[currentIndex].korean}
-              </div>
+              {direction === "ja-to-ko" ? (
+                <div className="text-lg text-emerald-400 font-medium py-2">
+                  {activeDue[currentIndex].korean}
+                </div>
+              ) : (
+                <div className="space-y-1 py-2">
+                  <div className="text-lg text-emerald-400 font-medium">
+                    {activeDue[currentIndex].japanese}
+                  </div>
+                  {activeDue[currentIndex].reading && (
+                    <div className="text-sm text-purple-400">
+                      {activeDue[currentIndex].reading}
+                    </div>
+                  )}
+                </div>
+              )}
               {activeDue[currentIndex].memo && (
                 <div className="text-xs text-gray-500">{activeDue[currentIndex].memo}</div>
               )}

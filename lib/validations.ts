@@ -5,7 +5,7 @@ export const noteSchema = z.object({
   korean: z.string().min(1),
   reading: z.string().optional(),
   memo: z.string().optional(),
-  category: z.enum(["business", "honda", "daily", "other"]),
+  category: z.enum(["business", "ev", "vehicle", "daily", "sw"]),
 });
 
 export const notePatchSchema = noteSchema.extend({
