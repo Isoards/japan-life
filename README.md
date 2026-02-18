@@ -116,24 +116,6 @@ docker compose up -d
 - 포트: `3090:3000`
 - 호스트 경로 볼륨 마운트 사용
 
-## 이미지 빌드/푸시 자동화 (로컬 Makefile)
-
-Apple Silicon Mac에서 NAS(amd64)용 이미지를 올릴 때 사용:
-
-```bash
-# 날짜 태그(MMDD) + latest, linux/amd64 push
-make docker-push-date
-
-# 멀티아키(amd64 + arm64) push
-make docker-push-multi
-```
-
-옵션 override:
-
-```bash
-make docker-push-date IMAGE=yourname/japan-life TAG=0220
-```
-
 ## GitHub Actions 자동 푸시
 
 워크플로우: `.github/workflows/docker-publish.yml`
@@ -143,7 +125,6 @@ make docker-push-date IMAGE=yourname/japan-life TAG=0220
 - 태그:
   - `latest`
   - `MMDD` (KST 기준)
-  - `sha-<commit_sha>`
 
 필수 GitHub Secrets:
 
