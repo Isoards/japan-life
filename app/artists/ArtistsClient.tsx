@@ -35,7 +35,7 @@ export default function ArtistsClient() {
         </Link>
       </div>
 
-      <div className="max-w-3xl relative">
+      <div className="w-full relative">
         <svg
           className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
           fill="none"

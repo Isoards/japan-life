@@ -142,7 +142,6 @@ function NotesTab() {
         (n.reading && n.reading.includes(search))
       );
     return search ? result : shuffle(result);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, filter, search]);
 
   if (loading) return <div className="text-gray-400 py-10 text-center">불러오는 중...</div>;

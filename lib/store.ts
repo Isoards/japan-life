@@ -18,7 +18,6 @@ const STORE_VERSIONS: Record<string, number> = {
   favorites: 1,
   links: 1,
   "user-concerts": 2,
-  logs: 1,
   garbage: 1,
   packages: 1,
 };

@@ -305,16 +305,12 @@ function ExchangeTab() {
   );
 
   const [subscriptions, setSubscriptions] =
-    useState<Subscription[]>(DEFAULT_SUBS);
+    useState<Subscription[]>(() => loadSubscriptions());
   const [editing, setEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", price: "", day: "" });
   const [adding, setAdding] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", price: "", day: "" });
-
-  useEffect(() => {
-    setSubscriptions(loadSubscriptions());
-  }, []);
 
   const saveSubs = useCallback((subs: Subscription[]) => {
     setSubscriptions(subs);

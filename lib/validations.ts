@@ -111,18 +111,6 @@ export const userConcertPatchSchema = userConcertSchema.partial().extend({
   id: z.string().min(1),
 });
 
-export const weeklyLogSchema = z.object({
-  week: z.string().min(1),
-  technical: z.string().min(1),
-  expression: z.string().min(1),
-  mistake: z.string().min(1),
-  memo: z.string().optional(),
-});
-
-export const weeklyLogPatchSchema = weeklyLogSchema.extend({
-  id: z.string().min(1),
-});
-
 export const idSchema = z.object({
   id: z.string().min(1),
 });

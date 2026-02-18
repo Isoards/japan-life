@@ -23,6 +23,7 @@ import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather";
 import { DAY_LABELS } from "@/lib/constants/garbage";
 
 const DASHBOARD_RENDER_TIME = Date.now();
+const DEPARTURE_DATE = new Date("2026-03-18T00:00:00+09:00");
 
 export default function DashboardClient() {
   const { data: favorites = [] } = useFavorites();
@@ -122,8 +123,6 @@ export default function DashboardClient() {
     () => packages.filter((p) => p.status !== "delivered" && p.status !== "returned"),
     [packages],
   );
-
-  const DEPARTURE_DATE = new Date("2026-03-18T00:00:00+09:00");
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {

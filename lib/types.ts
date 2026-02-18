@@ -130,16 +130,6 @@ export interface QuickLink {
   icon?: string;
 }
 
-export interface WeeklyLog {
-  id: string;
-  week: string;
-  technical: string;
-  expression: string;
-  mistake: string;
-  memo?: string;
-  createdAt: string;
-}
-
 export interface KaraokeSong {
   brand: "tj" | "kumyoung";
   no: string;

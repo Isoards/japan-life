@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useGarbageSchedule, mutateAPI } from "@/lib/hooks/use-api";
 import { DAY_LABELS } from "@/lib/constants/garbage";
-import type { GarbageScheduleEntry } from "@/lib/types";
 
 export default function GarbageClient() {
   const { data: schedule, isLoading } = useGarbageSchedule();

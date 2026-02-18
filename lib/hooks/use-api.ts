@@ -8,7 +8,6 @@ import type {
   ITunesTrack,
   KaraokeSong,
   SheetsSummary,
-  WeeklyLog,
   WeatherData,
   GarbageScheduleData,
   PackageEntry,
@@ -62,13 +61,6 @@ export function useFavorites() {
 
 export function useLinks() {
   return useSWR<QuickLink[]>("/api/links", fetcher, {
-    fallbackData: [],
-    revalidateOnFocus: false,
-  });
-}
-
-export function useLogs() {
-  return useSWR<WeeklyLog[]>("/api/logs", fetcher, {
     fallbackData: [],
     revalidateOnFocus: false,
   });
