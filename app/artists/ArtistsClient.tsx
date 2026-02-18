@@ -1,47 +1,41 @@
 "use client";
 
-import { useState, useMemo, memo } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useTopSongs, ChartSong } from "@/lib/hooks/use-api";
+import FavoriteButton from "@/components/FavoriteButton";
+import { useFavorites, useSearch } from "@/lib/hooks/use-api";
 
 export default function ArtistsClient() {
-  const { data: songs = [], isLoading } = useTopSongs();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const { data: favorites = [] } = useFavorites();
+  const { data: results = [], isLoading: loading } = useSearch(debouncedQuery);
+  const searched = debouncedQuery.length >= 2;
 
-  const filtered = useMemo(() => {
-    if (!searchQuery) return songs;
-    const q = searchQuery.toLowerCase();
-    return songs.filter(
-      (s) =>
-        s.songName.toLowerCase().includes(q) ||
-        s.artistName.toLowerCase().includes(q)
-    );
-  }, [songs, searchQuery]);
-
-  const top3 = !searchQuery ? filtered.slice(0, 3) : [];
-  const rest = !searchQuery ? filtered.slice(3) : filtered;
+  useEffect(() => {
+    const nextQuery = query.trim();
+    const delay = nextQuery.length < 2 ? 0 : 400;
+    const timer = setTimeout(() => setDebouncedQuery(nextQuery.length < 2 ? "" : nextQuery), delay);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-            일본 TOP 100
-          </h1>
-          <p className="text-gray-400 mt-1">Apple Music 일본 인기 차트</p>
+    <div className="space-y-8">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-white">아티스트</h1>
+          <p className="text-gray-400">검색하고 즐겨찾기를 관리하세요.</p>
         </div>
         <Link
-          href="/search"
+          href="/top100"
           className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
         >
-          아티스트 검색
+          일본 TOP 100 보기
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="relative">
+      <div className="max-w-3xl relative">
         <svg
           className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
           fill="none"
@@ -57,176 +51,101 @@ export default function ArtistsClient() {
         </svg>
         <input
           type="text"
-          placeholder="곡명 또는 아티스트 검색..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+          placeholder="아티스트 이름으로 검색... (예: LiSA, King Gnu)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-lg"
         />
       </div>
 
-      {searchQuery && (
-        <p className="text-sm text-gray-400">
-          &ldquo;{searchQuery}&rdquo; 검색 결과 {filtered.length}곡
-        </p>
+      {loading && (
+        <div className="text-center py-8">
+          <div className="inline-block w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 mt-2 text-sm">검색 중...</p>
+        </div>
       )}
 
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : (
-        <>
-          {/* TOP 3 Hero Cards */}
-          {top3.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {top3.map((song) => (
-                <TopCard key={song.rank} song={song} />
-              ))}
-            </div>
-          )}
-
-          {/* Rest of chart */}
-          {rest.length > 0 ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
-              {rest.map((song, i) => (
-                <SongRow key={`${song.rank}-${song.songName}`} song={song} isLast={i === rest.length - 1} />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-gray-500 text-center py-12">
-              검색 결과가 없습니다.
-            </p>
-          ) : null}
-        </>
+      {!loading && results.length > 0 && (
+        <div className="max-w-4xl">
+          <p className="text-sm text-gray-400 mb-4">{results.length}명의 아티스트를 찾았습니다.</p>
+          <div className="space-y-3">
+            {results.map((artist) => (
+              <div
+                key={artist.itunesId}
+                className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <Link href={`/artists/${artist.itunesId}`} className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 relative">
+                    {artist.imageUrl ? (
+                      <Image src={artist.imageUrl} alt={artist.name} fill className="object-cover" sizes="56px" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xl">
+                        {artist.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-white truncate">{artist.name}</h3>
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {artist.genres.map((g) => (
+                        <span key={g} className="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-300">
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+                <FavoriteButton
+                  artist={{
+                    itunesId: artist.itunesId,
+                    name: artist.name,
+                    imageUrl: artist.imageUrl,
+                    genres: artist.genres,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
-    </div>
-  );
-}
 
-/* ──── TOP 3 Hero Card ──── */
-const TopCard = memo(function TopCard({ song }: { song: ChartSong }) {
-  const medals = ["", "bg-yellow-500/20 border-yellow-500/30", "bg-gray-400/15 border-gray-400/30", "bg-amber-700/20 border-amber-700/30"];
-  const rankLabels = ["", "1st", "2nd", "3rd"];
-  const rankColors = ["", "text-yellow-400", "text-gray-300", "text-amber-500"];
+      {!loading && searched && results.length === 0 && (
+        <p className="text-gray-500 text-center py-8">&ldquo;{debouncedQuery}&rdquo; 검색 결과가 없습니다.</p>
+      )}
 
-  return (
-    <Link href={`/artists/${song.artistId}`}>
-      <div className={`group rounded-xl border p-4 transition-all hover:scale-[1.02] cursor-pointer ${medals[song.rank]}`}>
-        {/* Rank badge */}
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-xs font-bold uppercase tracking-wider ${rankColors[song.rank]}`}>
-            {rankLabels[song.rank]}
-          </span>
-          <svg
-            className="w-4 h-4 text-gray-600 group-hover:text-gray-300 transition-colors"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-
-        {/* Artwork */}
-        <div className="aspect-square rounded-lg overflow-hidden relative mb-3 shadow-lg">
-          {song.artworkUrl ? (
-            <Image
-              src={song.artworkUrl}
-              alt={song.songName}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 640px) 100vw, 33vw"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-4xl">
-              {song.songName.charAt(0)}
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <h3 className="font-bold text-white truncate group-hover:text-pink-400 transition-colors">
-          {song.songName}
-        </h3>
-        <p className="text-sm text-gray-400 truncate mt-0.5">
-          {song.artistName}
-        </p>
-      </div>
-    </Link>
-  );
-});
-
-/* ──── Song Row ──── */
-const SongRow = memo(function SongRow({ song, isLast }: { song: ChartSong; isLast: boolean }) {
-  const isTop10 = song.rank <= 10;
-
-  return (
-    <Link href={`/artists/${song.artistId}`}>
-      <div className={`flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors group ${!isLast ? "border-b border-white/5" : ""}`}>
-        {/* Rank */}
-        <span className={`w-8 text-center font-bold shrink-0 ${isTop10 ? "text-purple-400" : "text-gray-600"}`}>
-          {song.rank}
-        </span>
-
-        {/* Album Art */}
-        <div className="w-11 h-11 rounded-md overflow-hidden shrink-0 relative">
-          {song.artworkUrl ? (
-            <Image
-              src={song.artworkUrl}
-              alt={song.songName}
-              fill
-              className="object-cover"
-              sizes="44px"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xs">
-              {song.songName.charAt(0)}
-            </div>
-          )}
-        </div>
-
-        {/* Song Info */}
-        <div className="flex-1 min-w-0">
-          <h3 className={`text-sm truncate group-hover:text-pink-400 transition-colors ${isTop10 ? "font-semibold text-white" : "font-medium text-gray-200"}`}>
-            {song.songName}
-          </h3>
-          <p className="text-xs text-gray-500 truncate">{song.artistName}</p>
-        </div>
-
-        {/* Arrow */}
-        <svg
-          className="w-4 h-4 text-gray-700 group-hover:text-gray-400 transition-colors shrink-0"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </Link>
-  );
-});
-
-/* ──── Loading Skeleton ──── */
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="h-4 w-8 bg-white/10 rounded mb-3" />
-            <div className="aspect-square bg-white/10 rounded-lg mb-3" />
-            <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-            <div className="h-3 bg-white/10 rounded w-1/2" />
+      <section>
+        <h2 className="text-2xl font-bold text-white mb-4">♥ 즐겨찾기</h2>
+        {favorites.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {favorites.map((fav) => (
+              <Link key={fav.itunesId} href={`/artists/${fav.itunesId}`}>
+                <div className="group rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-pink-500/30 transition-all cursor-pointer">
+                  <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 relative">
+                    {fav.imageUrl ? (
+                      <Image
+                        src={fav.imageUrl}
+                        alt={fav.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xl">
+                        {fav.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-white text-center truncate group-hover:text-pink-400 transition-colors">
+                    {fav.name}
+                  </h3>
+                </div>
+              </Link>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        {[...Array(10)].map((_, i) => (
-          <div key={i} className="animate-pulse flex items-center gap-3 px-4 py-3 border-b border-white/5">
-            <div className="w-8 h-5 bg-white/10 rounded" />
-            <div className="w-11 h-11 bg-white/10 rounded-md" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-white/10 rounded w-2/5" />
-              <div className="h-3 bg-white/10 rounded w-1/4" />
-            </div>
-          </div>
-        ))}
-      </div>
+        ) : (
+          <p className="text-gray-500 text-sm">즐겨찾기한 아티스트가 없습니다.</p>
+        )}
+      </section>
     </div>
   );
 }

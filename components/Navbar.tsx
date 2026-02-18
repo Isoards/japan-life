@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 const navLinks = [
   { href: "/artists", label: "아티스트" },
+  { href: "/top100", label: "TOP100" },
   { href: "/karaoke", label: "노래방" },
   { href: "/concerts", label: "콘서트" },
   { href: "/checklist", label: "체크리스트" },
@@ -13,7 +14,6 @@ const navLinks = [
   { href: "/guide", label: "생활 가이드" },
   { href: "/expenses", label: "가계부" },
   { href: "/notes", label: "메모" },
-  { href: "/logs", label: "주간 로그" },
   { href: "/garbage", label: "쓰레기" },
   { href: "/packages", label: "택배" },
 ];
