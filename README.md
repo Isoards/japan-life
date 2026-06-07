@@ -22,7 +22,7 @@
 - 계산기 (`/calculator`)
   - 급여 실수령 근사 + 환율 + 구독비
 - 가계부 (`/expenses`)
-  - 예산 템플릿 + Google Sheets 연동 집계
+  - 예산 템플릿 + Google Sheets 연동 집계 + 정기 지출 탐지
 - 메모 (`/notes`)
   - 노트/템플릿/퀴즈/링크
 - 생활 도구

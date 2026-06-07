@@ -242,3 +242,24 @@ export interface MonthlyTrend {
   totalSaving: number;
   byCategory: Record<string, number>;
 }
+
+export interface RecurringExpense {
+  id: string;
+  label: string;
+  category: string;
+  months: string[];
+  occurrences: number;
+  averageAmount: number;
+  latestAmount: number;
+  latestMonth: string;
+  minAmount: number;
+  maxAmount: number;
+  variationRate: number;
+  confidence: "high" | "medium";
+}
+
+export interface RecurringExpensesResult {
+  months: number;
+  estimatedMonthlyTotal: number;
+  items: RecurringExpense[];
+}

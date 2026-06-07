@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
 import { getDefaultBudget } from "@/lib/calculator";
-import { mutateAPI, useBudget, useSheetsSummary, useSheetsTrend } from "@/lib/hooks/use-api";
+import { mutateAPI, useBudget, useRecurringExpenses, useSheetsSummary, useSheetsTrend } from "@/lib/hooks/use-api";
 import { INCOME_CATEGORIES, SAVING_CATEGORIES } from "@/lib/constants/budget";
 import type { BudgetCategory, SinkingFund } from "@/lib/types";
 
@@ -17,7 +17,7 @@ const CategoryPieChart = dynamic(
   { ssr: false },
 );
 
-type Tab = "budget" | "sheet" | "charts";
+type Tab = "budget" | "sheet" | "charts" | "recurring";
 
 function getUsageLevel(actual: number, budget: number): "safe" | "warn" | "danger" {
   if (budget <= 0) return "safe";
@@ -44,6 +44,7 @@ export default function ExpensesPage() {
           { key: "budget", label: "🏠 예산 플래너" },
           { key: "sheet", label: "📤 가계부 시트" },
           { key: "charts", label: "📊 지출 차트" },
+          { key: "recurring", label: "🔁 정기 지출" },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -60,6 +61,7 @@ export default function ExpensesPage() {
       {tab === "budget" && <BudgetTab />}
       {tab === "sheet" && <SheetTab />}
       {tab === "charts" && <ChartsTab />}
+      {tab === "recurring" && <RecurringTab />}
     </div>
   );
 }
@@ -74,13 +76,21 @@ function BudgetTab() {
   const [newFundName, setNewFundName] = useState("");
   const [newFundTarget, setNewFundTarget] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [incomeMode, setIncomeMode] = useState<"auto" | "manual">("auto");
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
   );
 
+  const previousMonth = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const date = new Date(year, month - 2, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }, [selectedMonth]);
+
   const { data: sheetData, isLoading: sheetsLoading } = useSheetsSummary(selectedMonth);
+  const { data: previousMonthSheet, isLoading: previousIncomeLoading } = useSheetsSummary(previousMonth);
   const alertHistory = useRef<Set<string>>(new Set());
   const prevStageByCategory = useRef<Record<string, string>>({});
 
@@ -98,7 +108,9 @@ function BudgetTab() {
         setCategories(merged);
       }
 
-      if (budgetData.income > 0) setIncome(String(budgetData.income));
+      if (budgetData.income > 0) {
+        setIncome(String(budgetData.income));
+      }
       setSinkingFunds(budgetData.sinkingFunds ?? []);
       setInitialized(true);
     }, 0);
@@ -154,25 +166,26 @@ function BudgetTab() {
   const updateAmount = (id: string, amount: number) => {
     const updated = categories.map((c) => (c.id === id ? { ...c, amount } : c));
     setCategories(updated);
-    save(updated, income, sinkingFunds);
+    save(updated, displayedIncome, sinkingFunds);
   };
 
   const shiftMonth = (delta: number) => {
     const [y, m] = selectedMonth.split("-").map(Number);
     const d = new Date(y, m - 1 + delta, 1);
+    setIncomeMode("auto");
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
 
   const updateSinkingFund = (id: string, patch: Partial<SinkingFund>) => {
     const updated = sinkingFunds.map((f) => (f.id === id ? { ...f, ...patch } : f));
     setSinkingFunds(updated);
-    save(categories, income, updated);
+    save(categories, displayedIncome, updated);
   };
 
   const deleteSinkingFund = (id: string) => {
     const updated = sinkingFunds.filter((f) => f.id !== id);
     setSinkingFunds(updated);
-    save(categories, income, updated);
+    save(categories, displayedIncome, updated);
   };
 
   const addSinkingFund = () => {
@@ -184,7 +197,7 @@ function BudgetTab() {
     }
 
     const fund: SinkingFund = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: `fund-${sinkingFunds.length + 1}-${name.replace(/\s+/g, "-")}-${targetAmount}`,
       name,
       targetAmount,
       savedAmount: 0,
@@ -194,7 +207,7 @@ function BudgetTab() {
     setSinkingFunds(updated);
     setNewFundName("");
     setNewFundTarget("");
-    save(categories, income, updated);
+    save(categories, displayedIncome, updated);
     toast("목표저축을 추가했습니다.");
   };
 
@@ -203,7 +216,15 @@ function BudgetTab() {
     return cat.sheetCategories.reduce((sum, sc) => sum + (sheetData.byCategory[sc] || 0), 0);
   };
 
-  const incomeVal = parseInt(income, 10) || 0;
+  const estimatedIncome = previousMonthSheet?.totalIncome ?? 0;
+  const shouldUseEstimatedIncome = initialized && incomeMode === "auto" && estimatedIncome > 0;
+  const displayedIncome = shouldUseEstimatedIncome ? String(estimatedIncome) : income;
+  const incomeSource: "saved" | "estimated" | "manual" = shouldUseEstimatedIncome
+    ? "estimated"
+    : incomeMode === "manual"
+      ? "manual"
+      : "saved";
+  const incomeVal = parseInt(displayedIncome, 10) || 0;
   const totalBudget = categories.reduce((sum, c) => sum + c.amount, 0);
   const totalActual = sheetData ? categories.reduce((sum, c) => sum + getActual(c), 0) : 0;
   const totalUsageLevel = getUsageLevel(totalActual, totalBudget);
@@ -211,6 +232,10 @@ function BudgetTab() {
   const fmt = (n: number) => n.toLocaleString("ja-JP");
   const monthLabel = (() => {
     const [y, m] = selectedMonth.split("-").map(Number);
+    return `${y}년 ${m}월`;
+  })();
+  const previousMonthLabel = (() => {
+    const [y, m] = previousMonth.split("-").map(Number);
     return `${y}년 ${m}월`;
   })();
 
@@ -241,13 +266,28 @@ function BudgetTab() {
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <label className="block text-sm text-gray-400 mb-2">월 실수령 수입 (세후)</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm text-gray-400">
+              월 실수령 수입 (세후)
+              {incomeSource === "estimated" && <span className="ml-1 text-blue-300">(예상)</span>}
+            </label>
+            <span className="text-[11px] text-gray-600">
+              {previousIncomeLoading
+                ? "전월 급여 확인 중..."
+                : incomeSource === "estimated"
+                  ? `${previousMonthLabel} 기준`
+                  : incomeSource === "manual"
+                    ? "수동 입력"
+                    : "저장값"}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500">¥</span>
             <input
               type="number"
-              value={income}
+              value={displayedIncome}
               onChange={(e) => {
+                setIncomeMode("manual");
                 setIncome(e.target.value);
                 save(categories, e.target.value, sinkingFunds);
               }}
@@ -259,7 +299,9 @@ function BudgetTab() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-          <div className="text-xs text-gray-500">수입</div>
+          <div className="text-xs text-gray-500">
+            수입{incomeSource === "estimated" ? " (예상)" : ""}
+          </div>
           <div className="text-lg font-bold text-white">¥{fmt(incomeVal)}</div>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
@@ -568,6 +610,108 @@ function ChartsTab() {
           Google Sheets에 데이터가 없거나 API 키가 설정되지 않았습니다.
         </p>
       )}
+    </div>
+  );
+}
+
+function RecurringTab() {
+  const { data, isLoading, error } = useRecurringExpenses(6);
+  const fmt = (n: number) => n.toLocaleString("ja-JP");
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <div className="inline-block w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-300">
+        정기 지출을 불러오지 못했습니다. Google Sheets API 설정을 확인해주세요.
+      </div>
+    );
+  }
+
+  const items = data?.items ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-gray-500">탐지 기간</div>
+          <div className="text-xl font-bold text-white mt-1">최근 {data?.months ?? 6}개월</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-gray-500">정기 지출 후보</div>
+          <div className="text-xl font-bold text-purple-300 mt-1">{items.length}개</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-gray-500">월 예상 합계</div>
+          <div className="text-xl font-bold text-emerald-300 mt-1">
+            ¥{fmt(data?.estimatedMonthlyTotal ?? 0)}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-300">반복 지출 탐지</h3>
+          <p className="text-xs text-gray-500 mt-1">
+            최근 6개월 Sheets 내역에서 같은 카테고리와 내용이 2개월 이상 반복되고 금액 변동이 낮은 지출을 찾습니다.
+          </p>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="py-12 text-center text-sm text-gray-500">
+            아직 정기 지출 후보가 없습니다. 같은 내용으로 2개월 이상 기록되면 여기에 표시됩니다.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-lg bg-white/5 border border-white/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white truncate">{item.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        item.confidence === "high"
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-amber-500/15 text-amber-300"
+                      }`}
+                    >
+                      {item.confidence === "high" ? "높음" : "후보"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {item.category} · {item.months.join(", ")} · {item.occurrences}회 반복
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 sm:w-[360px] text-right">
+                  <div>
+                    <div className="text-[10px] text-gray-600">평균</div>
+                    <div className="text-sm font-mono text-white">¥{fmt(item.averageAmount)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-600">최근</div>
+                    <div className="text-sm font-mono text-gray-300">¥{fmt(item.latestAmount)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-600">변동</div>
+                    <div className="text-sm font-mono text-gray-300">
+                      {(item.variationRate * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ export const SHEETS_HISTORY_RANGE = "내역!A:F";
 const COL_DATE = 1;
 const COL_TYPE = 2;
 const COL_CATEGORY = 3;
+const COL_DESCRIPTION = 4;
 const COL_AMOUNT = 5;
 const MONTH_PATTERN = /(\d{4})[-/.년](\d{1,2})/;
 
@@ -14,6 +15,7 @@ export type SheetCell = string | number | boolean;
 export interface ParsedSheetEntry {
   month: string;
   category: string;
+  description: string;
   amount: number;
   kind: "income" | "saving" | "expense";
 }
@@ -45,6 +47,7 @@ export function parseSheetEntries(rows: SheetCell[][]): ParsedSheetEntry[] {
     const dateRaw = String(row[COL_DATE] || "");
     const type = String(row[COL_TYPE] || "").trim();
     const category = String(row[COL_CATEGORY] || "").trim();
+    const description = String(row[COL_DESCRIPTION] || "").trim();
     const amount =
       typeof row[COL_AMOUNT] === "number"
         ? row[COL_AMOUNT]
@@ -59,11 +62,11 @@ export function parseSheetEntries(rows: SheetCell[][]): ParsedSheetEntry[] {
     const absAmount = Math.abs(amount);
 
     if (type === "수입" || INCOME_CATEGORIES.includes(category)) {
-      entries.push({ month, category, amount: absAmount, kind: "income" });
+      entries.push({ month, category, description, amount: absAmount, kind: "income" });
     } else if (type === "저축/투자" || SAVING_CATEGORIES.includes(category)) {
-      entries.push({ month, category, amount: absAmount, kind: "saving" });
+      entries.push({ month, category, description, amount: absAmount, kind: "saving" });
     } else {
-      entries.push({ month, category, amount: absAmount, kind: "expense" });
+      entries.push({ month, category, description, amount: absAmount, kind: "expense" });
     }
   }
 

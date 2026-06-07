@@ -12,6 +12,7 @@ import type {
   GarbageScheduleData,
   PackageEntry,
   MonthlyTrend,
+  RecurringExpensesResult,
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
@@ -150,6 +151,14 @@ export function usePackages() {
 export function useSheetsTrend(months = 6) {
   return useSWR<MonthlyTrend[]>(
     `/api/sheets/trend?months=${months}`,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+}
+
+export function useRecurringExpenses(months = 6) {
+  return useSWR<RecurringExpensesResult>(
+    `/api/sheets/recurring?months=${months}`,
     fetcher,
     { revalidateOnFocus: false },
   );
