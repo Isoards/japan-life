@@ -68,6 +68,39 @@ export interface SalaryBreakdown {
   netAnnual: number;
 }
 
+export interface SalaryLineItem {
+  id: string;
+  label: string;
+  labelJa: string;
+  amount: number;
+}
+
+export interface PayslipEarningItem extends SalaryLineItem {
+  taxable: boolean;
+}
+
+export type PayslipDeductionCategory = "tax" | "social" | "company";
+
+export interface PayslipDeductionItem extends SalaryLineItem {
+  category: PayslipDeductionCategory;
+}
+
+export interface PayslipBreakdown {
+  earnings: PayslipEarningItem[];
+  deductions: PayslipDeductionItem[];
+  totalEarnings: number;
+  taxableEarnings: number;
+  nonTaxableEarnings: number;
+  totalDeductions: number;
+  statutoryDeductions: number;
+  companyDeductions: number;
+  socialInsuranceTotal: number;
+  taxTotal: number;
+  netPay: number;
+  takeHomeRate: number;
+  deductionRate: number;
+}
+
 export interface BudgetCategory {
   id: string;
   label: string;

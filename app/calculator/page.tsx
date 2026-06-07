@@ -1,8 +1,14 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SalaryBreakdown } from "@/lib/types";
-import { calculateSalary, convertCurrency } from "@/lib/calculator";
+import type { PayslipDeductionItem, PayslipEarningItem, SalaryBreakdown } from "@/lib/types";
+import {
+  calculatePayslip,
+  calculateSalary,
+  convertCurrency,
+  DEFAULT_PAYSLIP_DEDUCTIONS,
+  DEFAULT_PAYSLIP_EARNINGS,
+} from "@/lib/calculator";
 import { useLiveExchangeRates } from "@/lib/hooks/use-api";
 
 interface Subscription {
@@ -109,8 +115,10 @@ export default function CalculatorPage() {
 }
 
 function SalaryTab() {
-  const [monthly, setMonthly] = useState("270000");
+  const [monthly, setMonthly] = useState("260000");
   const [bonusMonths, setBonusMonths] = useState("6.9");
+  const [earnings, setEarnings] = useState<PayslipEarningItem[]>(DEFAULT_PAYSLIP_EARNINGS);
+  const [deductions, setDeductions] = useState<PayslipDeductionItem[]>(DEFAULT_PAYSLIP_DEDUCTIONS);
 
   const result: SalaryBreakdown | null = useMemo(() => {
     const m = parseInt(monthly, 10);
@@ -120,7 +128,34 @@ function SalaryTab() {
     return calculateSalary(m, b);
   }, [monthly, bonusMonths]);
 
+  const payslip = useMemo(() => calculatePayslip(earnings, deductions), [earnings, deductions]);
+  const estimatedAnnualNet = result
+    ? payslip.netPay * 12 + result.bonusNetPerPayment * (result.bonusMonths > 0 ? 2 : 0)
+    : payslip.netPay * 12;
+
   const fmt = (n: number) => n.toLocaleString("ja-JP");
+  const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
+  const updateEarning = (id: string, amount: number) => {
+    setEarnings((items) => items.map((item) => (item.id === id ? { ...item, amount } : item)));
+  };
+  const updateDeduction = (id: string, amount: number) => {
+    setDeductions((items) => items.map((item) => (item.id === id ? { ...item, amount } : item)));
+  };
+  const resetPayslip = () => {
+    setEarnings(DEFAULT_PAYSLIP_EARNINGS);
+    setDeductions(DEFAULT_PAYSLIP_DEDUCTIONS);
+    setMonthly("260000");
+  };
+  const deductionColor = (category: PayslipDeductionItem["category"]) => {
+    if (category === "social") return "bg-blue-500";
+    if (category === "tax") return "bg-red-500";
+    return "bg-purple-500";
+  };
+  const deductionCategoryLabel = (category: PayslipDeductionItem["category"]) => {
+    if (category === "social") return "사회보험";
+    if (category === "tax") return "세금";
+    return "회사공제";
+  };
 
   return (
     <div className="space-y-6">
@@ -138,6 +173,18 @@ function SalaryTab() {
               className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-lg font-mono focus:outline-none focus:border-purple-500/50"
             />
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={resetPayslip}
+            className="px-3 py-1.5 rounded-lg text-xs bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors"
+          >
+            실제 명세서 프리셋 복원
+          </button>
+          <span className="text-xs text-gray-500 self-center">
+            2026년 6월 명세서: 지급 ¥291,758 / 공제 ¥63,424 / 실수령 ¥228,334
+          </span>
         </div>
 
         <div>
@@ -162,130 +209,124 @@ function SalaryTab() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="text-center p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-white/10">
-              <div className="text-sm text-gray-400">월 실수령액</div>
+              <div className="text-sm text-gray-400">실제 월 실수령액</div>
               <div className="text-3xl font-bold text-white mt-1">
-                ¥{fmt(result.netMonthly)}
+                ¥{fmt(payslip.netPay)}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                세전 ¥{fmt(result.grossMonthly)} 기준
+                지급총액 ¥{fmt(payslip.totalEarnings)} 기준
               </div>
             </div>
             <div className="text-center p-4 rounded-xl bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-white/10">
-              <div className="text-sm text-gray-400">연 실수령 합계</div>
+              <div className="text-sm text-gray-400">연 실수령 예상</div>
               <div className="text-3xl font-bold text-emerald-300 mt-1">
-                ¥{fmt(result.netAnnual)}
+                ¥{fmt(estimatedAnnualNet)}
               </div>
-              <div className="text-xs text-gray-500 mt-1">보너스 포함 추정</div>
+              <div className="text-xs text-gray-500 mt-1">
+                실제 월급 × 12 + 보너스 추정
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-400">
-                월급 공제 내역
-              </h3>
-              {[
-                {
-                  label: "소득세 (所得税)",
-                  value: result.incomeTax,
-                  color: "bg-red-500",
-                },
-                {
-                  label: "주민세 (住民税)",
-                  value: result.residentTax,
-                  color: "bg-orange-500",
-                },
-                {
-                  label: "건강보험 (健康保険)",
-                  value: result.healthInsurance,
-                  color: "bg-blue-500",
-                },
-                {
-                  label: "후생연금 (厚生年金)",
-                  value: result.pension,
-                  color: "bg-purple-500",
-                },
-                {
-                  label: "고용보험 (雇用保険)",
-                  value: result.employmentInsurance,
-                  color: "bg-green-500",
-                },
-              ].map((item) => {
-                const pct =
-                  result.grossMonthly > 0
-                    ? ((item.value / result.grossMonthly) * 100).toFixed(1)
-                    : "0";
-                return (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <div
-                      className={`w-2 h-2 rounded-full ${item.color} shrink-0`}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-medium text-gray-300">
+                  실제 월급명세서 분석
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  사진의 지급/공제 항목을 기준으로 계산합니다. 금액은 직접 수정할 수 있어요.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-xs text-gray-500">지급총액</div>
+                <div className="text-lg font-bold text-white">¥{fmt(payslip.totalEarnings)}</div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-xs text-gray-500">공제합계</div>
+                <div className="text-lg font-bold text-pink-300">¥{fmt(payslip.totalDeductions)}</div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-xs text-gray-500">차인지급액</div>
+                <div className="text-lg font-bold text-emerald-300">¥{fmt(payslip.netPay)}</div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-xs text-gray-500">실수령률</div>
+                <div className="text-lg font-bold text-blue-300">{pct(payslip.takeHomeRate)}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-medium text-gray-400">지급 항목</h4>
+                  <span className="text-xs text-gray-600">
+                    과세 ¥{fmt(payslip.taxableEarnings)} · 비과세 ¥{fmt(payslip.nonTaxableEarnings)}
+                  </span>
+                </div>
+                {earnings.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${item.taxable ? "bg-emerald-400" : "bg-sky-400"} shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-gray-200 truncate">{item.label}</div>
+                      <div className="text-[11px] text-gray-600 truncate">
+                        {item.labelJa} · {item.taxable ? "과세" : "비과세"}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      value={item.amount}
+                      onChange={(event) => updateEarning(item.id, parseInt(event.target.value, 10) || 0)}
+                      className="w-28 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-mono text-right focus:outline-none focus:border-purple-500/50"
                     />
-                    <span className="text-sm text-gray-300 flex-1">
-                      {item.label}
-                    </span>
-                    <span className="text-sm text-gray-500">{pct}%</span>
-                    <span className="text-sm font-mono text-white w-24 text-right">
-                      ¥{fmt(item.value)}
-                    </span>
                   </div>
-                );
-              })}
-              <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-                <div className="w-2 h-2 shrink-0" />
-                <span className="text-sm font-medium text-white flex-1">
-                  총 공제액
-                </span>
-                <span className="text-sm text-gray-500">
-                  {result.grossMonthly > 0
-                    ? (
-                        (result.totalDeductions / result.grossMonthly) *
-                        100
-                      ).toFixed(1)
-                    : "0"}
-                  %
-                </span>
-                <span className="text-sm font-mono font-medium text-pink-400 w-24 text-right">
-                  ¥{fmt(result.totalDeductions)}
-                </span>
+                ))}
               </div>
-            </div>
 
-            {/* Visual bar */}
-            <div className="space-y-1">
-              <div className="text-xs text-gray-500">월급 배분</div>
-              <div className="w-full h-4 rounded-full overflow-hidden flex">
-                {[
-                  { value: result.incomeTax, color: "bg-red-500" },
-                  { value: result.residentTax, color: "bg-orange-500" },
-                  { value: result.healthInsurance, color: "bg-blue-500" },
-                  { value: result.pension, color: "bg-purple-500" },
-                  { value: result.employmentInsurance, color: "bg-green-500" },
-                  { value: result.netMonthly, color: "bg-emerald-400" },
-                ].map((item, i) => {
-                  const w =
-                    result.grossMonthly > 0
-                      ? (item.value / result.grossMonthly) * 100
-                      : 0;
-                  return (
-                    <div
-                      key={i}
-                      className={`${item.color} h-full`}
-                      style={{ width: `${w}%` }}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-medium text-gray-400">공제 항목</h4>
+                  <span className="text-xs text-gray-600">
+                    법정 ¥{fmt(payslip.statutoryDeductions)} · 회사 ¥{fmt(payslip.companyDeductions)}
+                  </span>
+                </div>
+                {deductions.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${deductionColor(item.category)} shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-gray-200 truncate">{item.label}</div>
+                      <div className="text-[11px] text-gray-600 truncate">
+                        {item.labelJa} · {deductionCategoryLabel(item.category)}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      value={item.amount}
+                      onChange={(event) => updateDeduction(item.id, parseInt(event.target.value, 10) || 0)}
+                      className="w-28 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-mono text-right focus:outline-none focus:border-purple-500/50"
                     />
-                  );
-                })}
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500">공제</span>
-                <span className="text-emerald-400">실수령</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <p className="text-xs text-gray-600">
-              * 2025~2026년 기준 근사 계산입니다. 실제 금액은 회사/지역에 따라
-              다를 수 있습니다.
-            </p>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">공제율 {pct(payslip.deductionRate)}</span>
+                <span className="text-gray-500">
+                  사회보험 ¥{fmt(payslip.socialInsuranceTotal)} · 세금 ¥{fmt(payslip.taxTotal)}
+                </span>
+              </div>
+              <div className="w-full h-4 rounded-full overflow-hidden flex bg-white/10">
+                <div className="bg-blue-500 h-full" style={{ width: `${payslip.deductionRate * 100}%` }} />
+                <div className="bg-emerald-400 h-full" style={{ width: `${payslip.takeHomeRate * 100}%` }} />
+              </div>
+            </div>
           </div>
+
         </div>
       )}
     </div>
