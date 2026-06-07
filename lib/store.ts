@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
+import { DEFAULT_BUDGET_CATEGORIES } from "./constants/budget";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data", "user");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
@@ -12,7 +13,7 @@ type Migration = (data: unknown) => unknown;
 
 /** 스토어별 현재 버전 & 마이그레이션 맵 */
 const STORE_VERSIONS: Record<string, number> = {
-  budget: 3,
+  budget: 5,
   checklist: 1,
   notes: 2,
   favorites: 1,
@@ -108,6 +109,38 @@ const MIGRATIONS: Record<string, Record<number, Migration>> = {
     2: (data: unknown) => {
       const d = data as Record<string, unknown>;
       d.sinkingFunds = Array.isArray(d.sinkingFunds) ? d.sinkingFunds : [];
+      return d;
+    },
+    3: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      const categories = d.categories as Record<string, unknown>[];
+      if (Array.isArray(categories)) {
+        d.categories = categories.map((cat) => {
+          const preset = DEFAULT_BUDGET_CATEGORIES.find((p) => p.id === cat.id);
+          if (!preset) return cat;
+          return {
+            ...cat,
+            sheetCategories: preset.sheetCategories,
+          };
+        });
+      }
+      return d;
+    },
+    4: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      const categories = d.categories as Record<string, unknown>[];
+      if (Array.isArray(categories)) {
+        d.categories = categories
+          .filter((cat) => cat.id !== "remit")
+          .map((cat) => {
+            const preset = DEFAULT_BUDGET_CATEGORIES.find((p) => p.id === cat.id);
+            if (!preset) return cat;
+            return {
+              ...cat,
+              sheetCategories: preset.sheetCategories,
+            };
+          });
+      }
       return d;
     },
   },
