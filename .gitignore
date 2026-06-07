@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+/.claude/
+/notion/
 
 # debug
 npm-debug.log*

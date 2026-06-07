@@ -32,6 +32,8 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/data/artists.json ./data/artists.json
 COPY --from=builder /app/data/concerts.json ./data/concerts.json
+COPY --from=builder /app/data/guide-content.json ./data/guide-content.json
+COPY --from=builder /app/data/checklist-defaults.json ./data/checklist-defaults.json
 
 # Create data directory for persistent storage
 RUN mkdir -p /app/data/user && chown -R nextjs:nodejs /app/data/user

@@ -52,7 +52,7 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
   - 읽기: fallback 기본값 반환
   - 쓰기: 백업 생성 후 원자적 저장(tmp -> rename/copy fallback)
 - 버전/마이그레이션:
-  - `budget: v3`
+  - `budget: v5`
   - `notes: v2`
   - `user-concerts: v2`
   - `checklist, favorites, links, garbage, packages: v1`
