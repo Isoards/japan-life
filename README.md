@@ -26,7 +26,7 @@
 - 메모 (`/notes`)
   - 노트/템플릿/퀴즈/링크
 - 생활 도구
-  - 가이드(`/guide`), 노래방(`/karaoke`), 쓰레기(`/garbage`), 택배(`/packages`)
+  - 노래방(`/karaoke`), 쓰레기(`/garbage`), 택배(`/packages`)
 
 ## 기술 스택
 
@@ -78,7 +78,6 @@ npm run start
 
 - `data/artists.json`
 - `data/concerts.json`
-- `data/guide-content.json`
 - `data/checklist-defaults.json`
 
 ### 사용자 데이터 (`data/user/*.json`)

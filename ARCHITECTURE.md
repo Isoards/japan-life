@@ -13,7 +13,7 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
 - 급여/환율 계산 + 구독비 관리
 - 가계부(예산 템플릿 + Google Sheets 연동 실적)
 - 메모(노트/템플릿/퀴즈/링크)
-- 생활 가이드, 노래방 검색, 쓰레기 수거, 택배 추적
+- 노래방 검색, 쓰레기 수거, 택배 추적
 - 오프라인 안내(PWA fallback)
 
 ## 2) Technology Stack
@@ -75,7 +75,6 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
 - `/calculator` : 급여/환율 계산
 - `/expenses` : 예산/지출 대시보드
 - `/notes` : 노트/템플릿/퀴즈/링크
-- `/guide` : 생활 가이드
 - `/karaoke` : 노래방 검색
 - `/garbage` : 쓰레기 수거 요일 설정
 - `/packages` : 택배 추적
@@ -148,12 +147,11 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
 - 퀴즈(SRS 기반)
 - 링크 CRUD
 
-### 5.9 Garbage / Packages / Karaoke / Guide
+### 5.9 Garbage / Packages / Karaoke
 
 - Garbage: 요일별 수거 스케줄 편집
 - Packages: 운송장 상태/메모 관리
 - Karaoke: TJ/금영 통합 검색
-- Guide: 생활 가이드 섹션 렌더링
 
 ## 6) API Specification
 
@@ -391,7 +389,6 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
 
 - `artists.json`
 - `concerts.json`
-- `guide-content.json`
 - `checklist-defaults.json`
 
 ## 8) Caching Strategy
@@ -437,7 +434,6 @@ Japan Life Dashboard는 일본 생활 준비/정착을 위한 개인용 웹 애�
 - `/concerts` 콘서트
 - `/checklist` 체크리스트
 - `/calculator` 계산기
-- `/guide` 생활 가이드
 - `/expenses` 가계부
 - `/notes` 메모
 - `/garbage` 쓰레기

@@ -11,7 +11,6 @@ const navLinks = [
   { href: "/concerts", label: "콘서트" },
   { href: "/checklist", label: "체크리스트" },
   { href: "/calculator", label: "계산기" },
-  { href: "/guide", label: "생활 가이드" },
   { href: "/expenses", label: "가계부" },
   { href: "/notes", label: "메모" },
   { href: "/garbage", label: "쓰레기" },

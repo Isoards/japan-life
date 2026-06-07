@@ -131,19 +131,6 @@ export interface BudgetData {
   sinkingFunds: SinkingFund[];
 }
 
-export interface GuideSection {
-  id: string;
-  title: string;
-  icon: string;
-  items: GuideItem[];
-}
-
-export interface GuideItem {
-  title: string;
-  content: string;
-  linkedChecklist?: string[];
-}
-
 export type NoteCategory = "business" | "ev" | "vehicle" | "daily" | "sw";
 
 export interface Note {

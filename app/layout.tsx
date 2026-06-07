@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Japan Life",
   description:
-    "일본 생활 준비 대시보드 - J-Pop, 콘서트, 취업/이주 체크리스트, 계산기, 생활 가이드",
+    "일본 생활 준비 대시보드 - J-Pop, 콘서트, 취업/이주 체크리스트, 계산기, 생활 관리",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
