@@ -13,7 +13,7 @@ type Migration = (data: unknown) => unknown;
 
 /** 스토어별 현재 버전 & 마이그레이션 맵 */
 const STORE_VERSIONS: Record<string, number> = {
-  budget: 5,
+  budget: 8,
   checklist: 1,
   notes: 2,
   favorites: 1,
@@ -141,6 +141,72 @@ const MIGRATIONS: Record<string, Record<number, Migration>> = {
             };
           });
       }
+      return d;
+    },
+    5: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      const categories = Array.isArray(d.categories)
+        ? d.categories as Record<string, unknown>[]
+        : [];
+      const existingById = new Map(categories.map((category) => [String(category.id), category]));
+
+      // 기존에 입력한 예산 금액은 유지하면서, 가계부의 최신 카테고리명으로 매핑을 갱신한다.
+      const migrated = DEFAULT_BUDGET_CATEGORIES.map((preset) => {
+        const existing = existingById.get(preset.id);
+        return existing
+          ? { ...existing, label: preset.label, icon: preset.icon, sheetCategories: preset.sheetCategories }
+          : { ...preset };
+      });
+
+      // 더 이상 지출로 집계하지 않는 NISA는 제외하고, 사용자가 별도로 만든 카테고리는 보존한다.
+      const custom = categories.filter((category) => {
+        const id = String(category.id);
+        return id !== "nisa" && !DEFAULT_BUDGET_CATEGORIES.some((preset) => preset.id === id);
+      });
+      d.categories = [...migrated, ...custom];
+      return d;
+    },
+    6: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      const categories = Array.isArray(d.categories)
+        ? d.categories as Record<string, unknown>[]
+        : [];
+      const existingById = new Map(categories.map((category) => [String(category.id), category]));
+      const sourceIdsByTarget: Record<string, string[]> = {
+        food: ["food"],
+        living: ["fixed", "living", "transport", "other"],
+        culture: ["leisure", "shopping", "edu", "social"],
+      };
+
+      const migrated = DEFAULT_BUDGET_CATEGORIES.map((preset) => {
+        let sources = (sourceIdsByTarget[preset.id] ?? [preset.id])
+          .map((id) => existingById.get(id))
+          .filter((category): category is Record<string, unknown> => category !== undefined);
+        if (sources.length === 0) {
+          const existingTarget = existingById.get(preset.id);
+          sources = existingTarget ? [existingTarget] : [];
+        }
+        const amount = sources.length > 0
+          ? sources.reduce((sum, category) => sum + (Number(category.amount) || 0), 0)
+          : preset.amount;
+
+        return { ...preset, amount };
+      });
+
+      const migratedSourceIds = new Set(Object.values(sourceIdsByTarget).flat());
+      const custom = categories.filter((category) => {
+        const id = String(category.id);
+        return id !== "nisa"
+          && !migratedSourceIds.has(id)
+          && !DEFAULT_BUDGET_CATEGORIES.some((preset) => preset.id === id);
+      });
+      d.categories = [...migrated, ...custom];
+      return d;
+    },
+    7: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      // 대분류 예산을 세부 카테고리에 임의 배분하지 않고, 사용자가 항목별로 설정하게 한다.
+      d.categories = DEFAULT_BUDGET_CATEGORIES.map((preset) => ({ ...preset }));
       return d;
     },
   },

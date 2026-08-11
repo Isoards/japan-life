@@ -226,7 +226,8 @@ function BudgetTab() {
       : "saved";
   const incomeVal = parseInt(displayedIncome, 10) || 0;
   const totalBudget = categories.reduce((sum, c) => sum + c.amount, 0);
-  const totalActual = sheetData ? categories.reduce((sum, c) => sum + getActual(c), 0) : 0;
+  // 예산 카테고리에 아직 매핑되지 않은 지출도 실제 지출 합계에서는 빠지지 않게 한다.
+  const totalActual = sheetData?.totalExpense ?? 0;
   const totalUsageLevel = getUsageLevel(totalActual, totalBudget);
 
   const fmt = (n: number) => n.toLocaleString("ja-JP");

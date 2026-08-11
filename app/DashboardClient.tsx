@@ -81,16 +81,8 @@ export default function DashboardClient() {
     const total =
       budget?.categories?.reduce((sum, category) => sum + category.amount, 0) ??
       0;
-    const spent = currentMonthSheet
-      ? (budget?.categories ?? []).reduce((sum, category) => {
-          const sheetKeys = category.sheetCategories ?? [];
-          const categorySpent = sheetKeys.reduce(
-            (acc, key) => acc + (currentMonthSheet.byCategory?.[key] ?? 0),
-            0,
-          );
-          return sum + categorySpent;
-        }, 0)
-      : 0;
+    // 실제 지출은 예산 카테고리 매핑과 독립적으로 가계부의 지출 합계를 사용한다.
+    const spent = currentMonthSheet?.totalExpense ?? 0;
     return {
       budgetTotal: total,
       budgetSpent: spent,

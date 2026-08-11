@@ -9,6 +9,14 @@ const COL_CATEGORY = 3;
 const COL_DESCRIPTION = 4;
 const COL_AMOUNT = 5;
 const MONTH_PATTERN = /(\d{4})[-/.년](\d{1,2})/;
+const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
+const CATEGORY_ALIASES: Record<string, string> = {
+  "가전/디지털": "가전/가구",
+  "전자기기": "가전/가구",
+  "주유": "차량비",
+  "차량관리": "차량비",
+  "여가 기타": "기타",
+};
 
 export type SheetCell = string | number | boolean;
 
@@ -40,13 +48,33 @@ export function getRecentMonths(count: number): string[] {
   });
 }
 
+/** Google Sheets의 UNFORMATTED_VALUE 날짜(Excel 일련번호 포함)를 YYYY-MM으로 변환한다. */
+function parseMonth(dateRaw: SheetCell | undefined): string | null {
+  const raw = String(dateRaw ?? "").trim();
+  const dateMatch = raw.match(MONTH_PATTERN);
+  if (dateMatch) {
+    return `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}`;
+  }
+
+  // Google Sheets API는 valueRenderOption=UNFORMATTED_VALUE일 때 날짜를
+  // 1899-12-30 기준의 Excel 일련번호로 반환한다.
+  const serial = typeof dateRaw === "number" ? dateRaw : Number(raw);
+  if (!Number.isFinite(serial) || serial <= 0) return null;
+
+  const date = new Date(EXCEL_EPOCH_UTC + Math.floor(serial) * 86_400_000);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export function parseSheetEntries(rows: SheetCell[][]): ParsedSheetEntry[] {
   const entries: ParsedSheetEntry[] = [];
 
   for (const row of rows.slice(1)) {
-    const dateRaw = String(row[COL_DATE] || "");
+    const dateRaw = row[COL_DATE];
     const type = String(row[COL_TYPE] || "").trim();
-    const category = String(row[COL_CATEGORY] || "").trim();
+    const rawCategory = String(row[COL_CATEGORY] || "").trim();
+    const category = CATEGORY_ALIASES[rawCategory] ?? rawCategory;
     const description = String(row[COL_DESCRIPTION] || "").trim();
     const amount =
       typeof row[COL_AMOUNT] === "number"
@@ -55,10 +83,8 @@ export function parseSheetEntries(rows: SheetCell[][]): ParsedSheetEntry[] {
 
     if (!category || amount === 0) continue;
 
-    const dateMatch = dateRaw.match(MONTH_PATTERN);
-    if (!dateMatch) continue;
-
-    const month = `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}`;
+    const month = parseMonth(dateRaw);
+    if (!month) continue;
     const absAmount = Math.abs(amount);
 
     if (type === "수입" || INCOME_CATEGORIES.includes(category)) {
