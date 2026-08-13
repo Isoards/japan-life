@@ -1,0 +1,23 @@
+[
+  {"fromIngredientId":"chicken-thigh","toIngredientId":"chicken-breast","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"더 담백하지만 대부분의 볶음·카레 요리에 사용할 수 있어요."},
+  {"fromIngredientId":"thin-pork","toIngredientId":"pork-belly","type":"SUBSTITUTE","quality":"GOOD","noteKo":"기름기가 늘지만 돼지고기 요리에 잘 맞아요."},
+  {"fromIngredientId":"pork-belly","toIngredientId":"thin-pork","type":"SUBSTITUTE","quality":"GOOD","noteKo":"조금 담백해지지만 무리 없이 대체할 수 있어요."},
+  {"fromIngredientId":"thin-beef","toIngredientId":"thin-pork","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"고기 풍미는 달라지지만 덮밥·볶음에 사용할 수 있어요."},
+  {"fromIngredientId":"soft-tofu","toIngredientId":"tofu","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"부드러운 두부를 고르면 비슷하게 만들 수 있어요."},
+  {"fromIngredientId":"doenjang","toIngredientId":"miso","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"일본 미소는 더 달고 순해서 간을 조절하세요."},
+  {"fromIngredientId":"miso","toIngredientId":"doenjang","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"한국 된장은 더 진하므로 양을 줄여 보세요."},
+  {"fromIngredientId":"mirin","toIngredientId":"cooking-sake","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"요리술에 설탕을 조금 더하면 가까워져요."},
+  {"fromIngredientId":"cooking-sake","toIngredientId":"mirin","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"미림은 단맛이 있으므로 설탕을 줄이세요."},
+  {"fromIngredientId":"potato-starch","toIngredientId":"flour","type":"SUBSTITUTE","quality":"POOR","noteKo":"식감은 달라지지만 급할 때 사용할 수 있어요."},
+  {"fromIngredientId":"bean-sprout","toIngredientId":"soy-sprout","type":"SIMILAR","quality":"GOOD","noteKo":"향은 다르지만 볶음과 비빔밥에 잘 맞아요."},
+  {"fromIngredientId":"soy-sprout","toIngredientId":"bean-sprout","type":"SIMILAR","quality":"ACCEPTABLE","noteKo":"국물 맛은 달라지지만 대체할 수 있어요."},
+  {"fromIngredientId":"spinach","toIngredientId":"komatsuna","type":"SUBSTITUTE","quality":"GOOD","noteKo":"고마츠나는 일본 마트에서 구하기 쉽고 데침·국 요리에 잘 맞아요."},
+  {"fromIngredientId":"komatsuna","toIngredientId":"spinach","type":"SUBSTITUTE","quality":"GOOD","noteKo":"시금치로 같은 방식으로 조리할 수 있어요."},
+  {"fromIngredientId":"shimeji","toIngredientId":"maitake","type":"SIMILAR","quality":"GOOD","noteKo":"향은 달라도 볶음·솥밥·국에 같은 방식으로 쓸 수 있어요."},
+  {"fromIngredientId":"shimeji","toIngredientId":"enoki","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"식감은 다르지만 국이나 볶음에 사용할 수 있어요."},
+  {"fromIngredientId":"cod","toIngredientId":"salmon","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"생선 풍미는 달라지지만 팬 구이에는 잘 맞아요."},
+  {"fromIngredientId":"clam","toIngredientId":"seafood-mix","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"해산물 믹스로 간편하게 비슷한 감칠맛을 낼 수 있어요."},
+  {"fromIngredientId":"heavy-cream","toIngredientId":"milk","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"농도는 묽어지지만 버터나 치즈를 더하면 보완할 수 있어요."},
+  {"fromIngredientId":"white-dashi","toIngredientId":"mentsuyu","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"색과 단맛은 달라지지만 희석해 국물 간을 맞출 수 있어요."},
+  {"fromIngredientId":"mentsuyu","toIngredientId":"white-dashi","type":"SUBSTITUTE","quality":"ACCEPTABLE","noteKo":"간장 색은 옅지만 국물 요리에 사용할 수 있어요."}
+]

@@ -27,6 +27,12 @@
   - 노트/템플릿/퀴즈/링크
 - 생활 도구
   - 노래방(`/karaoke`), 쓰레기(`/garbage`), 택배(`/packages`)
+- 요리 (`/cooking`)
+  - Pantry 식재료 등록, 보유 재료 기반 요리 추천
+  - 한식·일식·중식·양식 탐색과 일본 장보기 명칭
+  - 재료 하나로 새롭게 가능한 요리를 계산하는 Unlock 장보기 추천
+  - 해본 요리 체크 및 모아보기
+  - 일본 마트 중심 식재료 136개와 자취 요리 117개 제공
 
 ## 기술 스택
 
@@ -79,6 +85,10 @@ npm run start
 - `data/artists.json`
 - `data/concerts.json`
 - `data/checklist-defaults.json`
+- `data/cooking-ingredients.json`
+- `data/cooking-dishes.json`
+- `data/cooking-relations.json`
+- `data/cooking-recipe-sources.json`
 
 ### 사용자 데이터 (`data/user/*.json`)
 
@@ -90,6 +100,8 @@ npm run start
 - `notes.json`
 - `user-concerts.json`
 - `packages.json` (필요 시 생성)
+- `cooking-pantry.json` (Pantry 변경 시 생성)
+- `cooking-cooked.json` (해본 요리 체크 시 생성)
 
 `data/user`는 런타임 저장소이며 API CRUD 결과가 이 파일들에 반영됩니다.
 

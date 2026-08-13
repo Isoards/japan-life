@@ -21,6 +21,8 @@ const STORE_VERSIONS: Record<string, number> = {
   "user-concerts": 2,
   garbage: 1,
   packages: 1,
+  "cooking-pantry": 1,
+  "cooking-cooked": 1,
 };
 
 /**

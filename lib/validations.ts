@@ -152,6 +152,13 @@ export const packagePatchSchema = z.object({
   deliveredAt: z.string().optional(),
 });
 
+// ── Cooking ──
+
+export const pantryItemSchema = z.object({
+  ingredientId: z.string().min(1),
+  storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
+});
+
 /** Parse with zod - returns data or a string error message. */
 export function parseOrError<T>(schema: z.ZodType<T>, data: unknown): { ok: true; data: T } | { ok: false; error: string } {
   const result = schema.safeParse(data);

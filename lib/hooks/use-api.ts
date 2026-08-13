@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
+import type { CookingOverview } from "../cooking/types";
 
 interface SearchResult {
   itunesId: number;
@@ -144,6 +145,12 @@ export function useGarbageSchedule() {
 export function usePackages() {
   return useSWR<PackageEntry[]>("/api/packages", fetcher, {
     fallbackData: [],
+    revalidateOnFocus: false,
+  });
+}
+
+export function useCookingOverview() {
+  return useSWR<CookingOverview>("/api/cooking/overview", fetcher, {
     revalidateOnFocus: false,
   });
 }

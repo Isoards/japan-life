@@ -14,6 +14,7 @@ Japan Life Dashboard는 일본 생활/정착을 관리하는 개인용 Next.js �
 - **Expenses**: 예산 플래너, Google Sheets 월별 집계, 전월 급여 기반 예상 수입, 지출 차트, 정기 지출 탐지.
 - **Notes**: 일본어/업무/EV/SW 메모, 템플릿, SRS 퀴즈, 링크 관리.
 - **Life Tools**: 노래방 검색, 쓰레기 수거 일정, 택배 관리, PWA offline fallback.
+- **Cooking**: Pantry, 결정론적 요리 추천, 일본어 장보기 이름, 단일 재료 Unlock 분석.
 
 ## 2. Technology
 
@@ -93,6 +94,11 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `/garbage`: garbage schedule
 - `/packages`: package tracking
 - `/offline`: PWA offline page
+- `/cooking`: 요리 추천 요약
+- `/cooking/pantry`: 보유 식재료 관리
+- `/cooking/discover`: 국가·재료 상태별 요리 탐색
+- `/cooking/dishes/[id]`: 재료 상태·대체재·외부 레시피 상세
+- `/cooking/shopping`: 단일 재료 구매 시 새롭게 가능한 요리 순위
 
 ### 5.2 JSON Store APIs
 
@@ -105,6 +111,8 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `POST /api/user-concerts/import`
 - `GET, POST /api/garbage`
 - `GET, POST, PATCH, DELETE /api/packages`
+- `GET, POST, DELETE /api/cooking/pantry`
+- `GET, POST, DELETE /api/cooking/cooked`
 
 ### 5.3 External/Computed APIs
 
@@ -118,6 +126,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `GET /api/sheets?month=YYYY-MM`: monthly Google Sheets aggregate
 - `GET /api/sheets/trend?months=6`: recent monthly trend
 - `GET /api/sheets/recurring?months=6`: recurring expense candidates
+- `GET /api/cooking/overview`: Pantry 기준 추천과 Unlock 계산 결과
 
 ## 6. Domain Notes
 
@@ -178,6 +187,10 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 - `data/artists.json`
 - `data/concerts.json`
 - `data/checklist-defaults.json`
+- `data/cooking-ingredients.json`: 한국어 우선 식재료 136개와 일본 현지명
+- `data/cooking-dishes.json`: 자취 요리 117개와 중요도별 식재료 관계
+- `data/cooking-relations.json`: 동등·대체·유사 식재료 관계
+- `data/cooking-recipe-sources.json`: 외부 레시피 검색 출처
 
 ### 7.2 Runtime User Data
 
@@ -189,8 +202,14 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 - `data/user/notes.json`
 - `data/user/user-concerts.json`
 - `data/user/packages.json` when created
+- `data/user/cooking-pantry.json` when the pantry is changed
+- `data/user/cooking-cooked.json` when a dish is marked as cooked
 
 `data/user` is runtime storage and should not be used as static seed data.
+
+### 7.3 Cooking recommendation model
+
+`lib/cooking`은 정적 데이터/파일 저장과 추천 규칙을 분리한다. `recommendation.ts`는 REQUIRED를 가장 크게 가중하고 IMPORTANT, OPTIONAL 순으로 적합도를 계산한다. UI의 `바로 가능`은 REQUIRED와 IMPORTANT가 모두 충족된 경우만 의미하며 OPTIONAL은 판정을 막지 않는다. GOOD 대체재는 해당 재료를 충족한 것으로 처리하며 그 외 대체재는 부분 점수로 반영한다. `unlock.ts`는 Pantry에 없는 재료를 하나씩 가상 추가해 새롭게 `canCookNow`가 되는 요리를 계산한다. 두 모듈은 평범한 배열을 입력받는 순수 함수이므로 저장소를 바꾸어도 다시 사용할 수 있다.
 
 ## 8. External Configuration
 
