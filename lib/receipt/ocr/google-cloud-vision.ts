@@ -12,9 +12,7 @@ export class GoogleCloudVisionReceiptOcrProvider implements ReceiptOcrProvider {
   constructor(private readonly apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY) {}
 
   async extractText(image: Buffer): Promise<string[]> {
-    if (!this.apiKey) {
-      throw new ReceiptOcrError("OCR 서비스가 설정되지 않았습니다.", "UNAVAILABLE");
-    }
+    if (!this.apiKey) throw new ReceiptOcrError("OCR 서비스가 설정되지 않았습니다.", "UNAVAILABLE");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -22,13 +20,11 @@ export class GoogleCloudVisionReceiptOcrProvider implements ReceiptOcrProvider {
       const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(this.apiKey)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{
-            image: { content: image.toString("base64") },
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-            imageContext: { languageHints: ["ja"] },
-          }],
-        }),
+        body: JSON.stringify({ requests: [{
+          image: { content: image.toString("base64") },
+          features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+          imageContext: { languageHints: ["ja"] },
+        }] }),
         signal: controller.signal,
       });
       if (!response.ok) throw new ReceiptOcrError("OCR 서비스 요청에 실패했습니다.", "PROVIDER_ERROR");
@@ -41,9 +37,7 @@ export class GoogleCloudVisionReceiptOcrProvider implements ReceiptOcrProvider {
       return lines;
     } catch (error) {
       if (error instanceof ReceiptOcrError) throw error;
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new ReceiptOcrError("OCR 처리 시간이 초과되었습니다.", "TIMEOUT");
-      }
+      if (error instanceof Error && error.name === "AbortError") throw new ReceiptOcrError("OCR 처리 시간이 초과되었습니다.", "TIMEOUT");
       throw new ReceiptOcrError("OCR 처리 중 오류가 발생했습니다.", "PROVIDER_ERROR");
     } finally {
       clearTimeout(timeout);

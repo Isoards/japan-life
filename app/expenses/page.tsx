@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { getDefaultBudget } from "@/lib/calculator";
 import { mutateAPI, useBudget, useRecurringExpenses, useSheetsSummary, useSheetsTrend } from "@/lib/hooks/use-api";
@@ -32,11 +33,13 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-          가계부
-        </h1>
-        <p className="text-gray-400 mt-1">예산 관리와 Google Sheets 가계부 연동</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            가계부
+          </h1>
+          <p className="text-gray-400 mt-1">예산 관리와 Google Sheets 가계부 연동</p>
+        </div>
+        <Link href="/expenses/receipt" className="rounded-xl border border-pink-400/20 bg-pink-500/10 px-4 py-3 text-sm font-semibold text-pink-200 hover:bg-pink-500/20">🧾 영수증으로 지출 추가</Link>
       </div>
 
       <div className="flex gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
@@ -71,7 +74,7 @@ function BudgetTab() {
   const { toast } = useToast();
 
   const [categories, setCategories] = useState<BudgetCategory[]>(getDefaultBudget());
-  const [income, setIncome] = useState<string>("270000");
+  const [income, setIncome] = useState<string>("228000");
   const [sinkingFunds, setSinkingFunds] = useState<SinkingFund[]>([]);
   const [newFundName, setNewFundName] = useState("");
   const [newFundTarget, setNewFundTarget] = useState("");
@@ -169,6 +172,16 @@ function BudgetTab() {
     save(updated, displayedIncome, sinkingFunds);
   };
 
+  const applyRecommendedBudget = () => {
+    const recommended = getDefaultBudget();
+    const recommendedIncome = "228000";
+    setCategories(recommended);
+    setIncome(recommendedIncome);
+    setIncomeMode("manual");
+    save(recommended, recommendedIncome, sinkingFunds);
+    toast("예산 진단 권장값을 적용했습니다.");
+  };
+
   const shiftMonth = (delta: number) => {
     const [y, m] = selectedMonth.split("-").map(Number);
     const d = new Date(y, m - 1 + delta, 1);
@@ -246,6 +259,15 @@ function BudgetTab() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div>
+          <p className="text-sm font-semibold text-emerald-200">월 생활비 권장 상한 ¥165,000</p>
+          <p className="mt-1 text-xs leading-5 text-gray-400">식비 ¥35,000 · 고정·계약/교통·차량/생활·소비 ¥105,000 · 사교·여가 ¥25,000</p>
+          <p className="text-xs text-gray-500">¥170,000 초과 시 경고 · ¥180,000 초과 시 다음 달 조정 · 저축/투자 ¥60,000 이상 목표</p>
+        </div>
+        <button onClick={applyRecommendedBudget} className="mt-3 shrink-0 rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-medium text-emerald-200 hover:bg-emerald-500/10 sm:mt-0">진단 기본값으로 재설정</button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-white/5 p-4">
           <label className="block text-sm text-gray-400 mb-2">조회 월 (Sheets 연동)</label>
@@ -392,7 +414,7 @@ function BudgetTab() {
               <div className="min-w-0">
                 <span className="text-sm text-gray-300 truncate block">{cat.label}</span>
                 {cat.sheetCategories?.length > 0 && (
-                  <span className="text-[10px] text-gray-600 truncate block">{cat.sheetCategories.join(", ")}</span>
+                  <span className="mt-0.5 block text-[10px] leading-4 text-gray-600">{cat.sheetCategories.join(" · ")}</span>
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">

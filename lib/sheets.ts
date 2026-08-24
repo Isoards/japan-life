@@ -1,7 +1,9 @@
 import { INCOME_CATEGORIES, SAVING_CATEGORIES } from "./constants/budget";
 
-export const SHEETS_ID = "1volLOrTwvHDDOCXY_AD7fLqVd5JVHHm9HsPg7QTZ0qg";
-export const SHEETS_HISTORY_RANGE = "내역!A:F";
+export const SHEETS_ID = process.env.GOOGLE_SHEETS_ID || "1volLOrTwvHDDOCXY_AD7fLqVd5JVHHm9HsPg7QTZ0qg";
+export const SHEETS_HISTORY_RANGE = "내역!A:I";
+export const SHEETS_SETTINGS_RANGE = "설정!A2:D47";
+export const SHEETS_CLASSIFICATION_GUIDE_RANGE = "분류가이드!A11:D21";
 
 const COL_DATE = 1;
 const COL_TYPE = 2;

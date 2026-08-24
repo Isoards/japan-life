@@ -10,7 +10,7 @@ export async function GET() {
   const data = await readStore<BudgetData | null>(STORE_NAME, null);
   if (data === null) {
     const defaults: BudgetData = {
-      income: 0,
+      income: 228_000,
       categories: getDefaultBudget(),
       sinkingFunds: [],
     };

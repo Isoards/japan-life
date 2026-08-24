@@ -13,7 +13,7 @@ type Migration = (data: unknown) => unknown;
 
 /** 스토어별 현재 버전 & 마이그레이션 맵 */
 const STORE_VERSIONS: Record<string, number> = {
-  budget: 8,
+  budget: 9,
   checklist: 1,
   notes: 2,
   favorites: 1,
@@ -224,6 +224,16 @@ const MIGRATIONS: Record<string, Record<number, Migration>> = {
       const d = data as Record<string, unknown>;
       // 대분류 예산을 세부 카테고리에 임의 배분하지 않고, 사용자가 항목별로 설정하게 한다.
       d.categories = DEFAULT_BUDGET_CATEGORIES.map((preset) => ({ ...preset }));
+      return d;
+    },
+    8: (data: unknown) => {
+      const d = data as Record<string, unknown>;
+      // 설정 시트의 현재 5개 대분류와 예산 진단 권장 상한으로 재구성한다.
+      d.income = 228_000;
+      d.categories = DEFAULT_BUDGET_CATEGORIES.map((preset) => ({
+        ...preset,
+        sheetCategories: [...preset.sheetCategories],
+      }));
       return d;
     },
   },

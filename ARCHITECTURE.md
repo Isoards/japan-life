@@ -89,6 +89,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `/checklist`: checklist
 - `/calculator`: salary and exchange calculator
 - `/expenses`: budget, Sheets summary, charts, recurring expenses
+- `/expenses/receipt`: 일본 영수증에서 Google Sheets 지출 행 생성·검토
 - `/notes`: notes, templates, quiz, links
 - `/karaoke`: TJ/Kumyoung karaoke search
 - `/garbage`: garbage schedule
@@ -131,15 +132,18 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `POST /api/cooking/receipt/ocr`: multipart 영수증 이미지를 서버 OCR로 처리
 - `POST /api/cooking/receipt/parse`: 일반 문자열 행을 결정적 품목 파서로 분석
 - `POST /api/cooking/receipt/confirm`: 검토된 Ingredient ID를 Pantry에 중복 없이 병합
+- `POST /api/expenses/receipt/ocr`: 공용 OCR 공급자로 가계부 영수증 처리
+- `POST /api/expenses/receipt/parse`: 상점·날짜·품목별 가격·합계를 분류가이드 기반 다중 카테고리 초안으로 변환
+- `POST /api/expenses/receipt/confirm`: 카테고리 합계와 중복을 확인한 뒤 내역 행들을 추가
 
 ## 6. Domain Notes
 
 ### 6.1 Expenses and Sheets
 
-Source sheet range is `내역!A:F`.
+Source sheet range is `내역!A:I`.
 
 ```text
-A=ID, B=날짜, C=구분, D=카테고리, E=내용, F=금액
+A=ID, B=날짜, C=구분, D=카테고리, E=내용, F=금액, G=결제수단, H=메모, I=정기
 ```
 
 `lib/sheets.ts` parses rows into normalized entries:
@@ -163,6 +167,12 @@ Recurring expense detection:
 - Requires at least 2 distinct months in the selected period.
 - Rejects groups with amount variation over 35%.
 - Marks confidence as high when 3+ months repeat and variation is 15% or lower.
+
+Receipt expense import keeps general receipt parsing separate from Cooking ingredient matching. `lib/receipt/ocr` owns the shared OCR provider, `lib/receipt/parser` extracts merchant/date/items/item prices/total, and `lib/expenses/receipt` formats an editable expense draft. Parse and confirm read `설정!A2:D47`, while parse also reads `분류가이드!A11:D21`; only categories whose type is `지출` and payment methods present in column D are accepted. Deterministic product rules group one receipt into categories such as `장보기`, `술/유흥`, and `생활용품`. The review UI also supports adding a category omitted by OCR or deleting an incorrect group. Confirm rejects the draft unless every row has a positive amount and the group amounts exactly equal the receipt total, then appends one A:I row per category using the configured service account or Apps Script writer. I열 `정기` is `FALSE`. Existing summary code continues to aggregate B:F.
+
+Expense descriptions use the established Korean-first Sheet style (`토리센 (김밥)`). `lib/expenses/receipt/koreanize.ts` applies a compact deterministic merchant/product dictionary first, then optionally sends only unresolved merchant/item strings to Google Cloud Translation Basic. The review UI retains the original Japanese OCR strings and all Korean fields remain editable before confirmation.
+
+Budget planning displays the `설정` sheet's current five major groups rather than one input per detailed expense category. `BudgetCategory.sheetCategories` keeps the exact detailed-category mapping used to aggregate actual spending. The default diagnostic plan is `식비 35,000`, `고정·계약비 45,000`, `교통·차량 50,000`, `생활·소비 10,000`, and `사교·여가 25,000` yen, for a total monthly spending ceiling of 165,000 yen against a 228,000 yen baseline take-home income.
 
 ### 6.2 Calculator
 
@@ -227,7 +237,8 @@ mobile image → /receipt/ocr → ReceiptOcrProvider (Google Cloud Vision)
              → /api/cooking/overview SWR revalidation
 ```
 
-- `lib/cooking/ocr`: 교체 가능한 `ReceiptOcrProvider`와 Google Cloud Vision REST 구현. 서버 환경 변수만 사용한다.
+- `lib/receipt/ocr`: Cooking과 Expenses가 공유하는 교체 가능한 `ReceiptOcrProvider`와 Google Cloud Vision REST 구현. 서버 환경 변수만 사용한다.
+- `lib/receipt/parser`: 상점·거래일·구매 품목·최종 금액을 보존하는 일반 영수증 파서.
 - `lib/cooking/receipt`: OCR과 무관한 순수 문자열 정리, 메타데이터 필터, 식품 분류, Ingredient 점수 매칭, Pantry 병합.
 - `Ingredient.receiptAliasesJa`: 정식 일본어 이름과 별개인 영수증 축약·PB 표기를 보관한다. 새 표기는 Ingredient를 복제하지 않고 이 배열에 추가한다.
 - 0.90 이상은 높은 신뢰도로 자동 선택하고, 0.70–0.89는 선택하되 검토 대상으로 표시하며, 그 미만은 사용자가 후보 또는 전체 Ingredient 검색으로 정한다.
@@ -237,10 +248,17 @@ mobile image → /receipt/ocr → ReceiptOcrProvider (Google Cloud Vision)
 ## 8. External Configuration
 
 - `GOOGLE_SHEETS_API_KEY`: required for `/api/sheets`, `/api/sheets/trend`, `/api/sheets/recurring`
+- `GOOGLE_SHEETS_ID`: optional spreadsheet override
+- `GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL`: server-only service account used for expense row append
+- `GOOGLE_SHEETS_PRIVATE_KEY`: server-only private key used for expense row append
+- `GOOGLE_SHEETS_WRITE_PROVIDER`: `service-account` or `apps-script`
+- `GOOGLE_SHEETS_APPS_SCRIPT_URL`: optional Apps Script Web App `/exec` URL
+- `GOOGLE_SHEETS_APPS_SCRIPT_SECRET`: server-only shared secret matching Apps Script `API_SECRET`
 - `DATA_DIR`: optional override for runtime JSON store path
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: documented env, currently not central to active pages
 - `RECEIPT_OCR_PROVIDER`: optional, defaults to `google-cloud-vision`
 - `GOOGLE_CLOUD_VISION_API_KEY`: server-only key required by receipt OCR
+- `GOOGLE_CLOUD_TRANSLATION_API_KEY`: optional server-only Translation Basic key; falls back to the Vision key
 
 ## 9. Build and Deployment
 

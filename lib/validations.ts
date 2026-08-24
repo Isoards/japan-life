@@ -168,6 +168,39 @@ export const receiptConfirmSchema = z.object({
   storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
 });
 
+export const expenseReceiptParseSchema = z.object({
+  lines: z.array(z.string().max(500)).min(1).max(300),
+});
+
+export const expenseReceiptEntrySchema = z.object({
+  id: z.string().min(1).max(80),
+  category: z.string().trim().min(1).max(50),
+  itemNames: z.array(z.string().trim().min(1).max(120)).max(50),
+  originalItemNames: z.array(z.string().trim().min(1).max(120)).max(50),
+  description: z.string().trim().min(1).max(500),
+  amount: z.number().positive().max(100_000_000),
+});
+
+export const expenseReceiptDraftSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "날짜 형식은 YYYY-MM-DD여야 합니다"),
+  type: z.literal("지출"),
+  merchantName: z.string().trim().min(1).max(120),
+  purchasedItems: z.array(z.string().trim().min(1).max(120)).max(50),
+  originalMerchantName: z.string().trim().max(120),
+  originalPurchasedItems: z.array(z.string().trim().min(1).max(120)).max(50),
+  totalAmount: z.number().positive().max(100_000_000),
+  entries: z.array(expenseReceiptEntrySchema).min(1).max(20),
+  paymentMethod: z.string().trim().min(1).max(50),
+  memo: z.string().trim().max(500),
+  confidence: z.number().min(0).max(1),
+  warnings: z.array(z.string().max(200)).max(20),
+});
+
+export const expenseReceiptConfirmSchema = z.object({
+  draft: expenseReceiptDraftSchema,
+  allowDuplicate: z.boolean().optional().default(false),
+});
+
 export const cookingLogSchema = z.object({
   dishId: z.string().min(1),
   cookedOn: z.string()

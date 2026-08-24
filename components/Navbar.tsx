@@ -5,17 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navLinks = [
+  { href: "/expenses", label: "가계부" },
+  { href: "/calculator", label: "계산기" },
+  { href: "/cooking", label: "요리" },
   { href: "/artists", label: "아티스트" },
   { href: "/top100", label: "TOP100" },
-  { href: "/karaoke", label: "노래방" },
-  { href: "/concerts", label: "콘서트" },
   { href: "/checklist", label: "체크리스트" },
-  { href: "/calculator", label: "계산기" },
-  { href: "/expenses", label: "가계부" },
   { href: "/notes", label: "메모" },
   { href: "/garbage", label: "쓰레기" },
   { href: "/packages", label: "택배" },
-  { href: "/cooking", label: "요리" },
+  { href: "/karaoke", label: "노래방" },
+  { href: "/concerts", label: "콘서트" },
 ];
 
 export default function Navbar() {
