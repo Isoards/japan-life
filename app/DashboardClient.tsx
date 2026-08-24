@@ -17,6 +17,7 @@ import {
   useWeather,
   useGarbageSchedule,
   usePackages,
+  useCookingOverview,
 } from "@/lib/hooks/use-api";
 import { getUpcomingHolidays } from "@/lib/constants/holidays";
 import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather";
@@ -98,6 +99,7 @@ export default function DashboardClient() {
   const { data: weather, isLoading: weatherLoading } = useWeather();
   const { data: garbageSchedule } = useGarbageSchedule();
   const { data: packages = [] } = usePackages();
+  const { data: cookingOverview, isLoading: cookingLoading } = useCookingOverview();
 
   const upcomingHolidays = useMemo(() => getUpcomingHolidays(3), []);
 
@@ -198,6 +200,35 @@ export default function DashboardClient() {
           </p>
         </div>
       </div>
+
+      {/* 요리 / 영수증 빠른 실행 */}
+      <section>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link href="/cooking" className="group rounded-xl border border-orange-400/15 bg-gradient-to-br from-orange-500/10 via-transparent to-amber-500/5 p-5 transition-all hover:border-orange-400/35 hover:bg-orange-500/10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2"><span className="text-2xl">🍳</span><h3 className="font-semibold text-white">오늘의 요리</h3></div>
+                <p className="mt-2 text-sm text-gray-400">보유 재료로 만들 수 있는 요리를 확인해요.</p>
+                <p className="mt-3 text-xs text-orange-300">
+                  {cookingLoading || !cookingOverview
+                    ? "요리 추천 불러오는 중..."
+                    : `바로 가능한 요리 ${cookingOverview.recommendations.filter((item) => item.canCookNow).length}개 · 보유 재료 ${cookingOverview.pantry.items.length}개`}
+                </p>
+              </div>
+              <span className="text-orange-300 transition-transform group-hover:translate-x-1">→</span>
+            </div>
+          </Link>
+
+          <div className="rounded-xl border border-pink-400/15 bg-gradient-to-br from-pink-500/10 via-transparent to-purple-500/5 p-5">
+            <div className="flex items-center gap-2"><span className="text-2xl">🧾</span><h3 className="font-semibold text-white">영수증 추가</h3></div>
+            <p className="mt-2 text-sm text-gray-400">일본 영수증을 읽어 원하는 곳에 반영해요.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link href="/expenses/receipt" className="rounded-lg bg-pink-400 px-3 py-2.5 text-center text-xs font-semibold text-gray-950 transition hover:bg-pink-300">가계부에 추가</Link>
+              <Link href="/cooking/receipt" className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5 text-center text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20">Pantry에 추가</Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* 날씨 위젯 */}
       <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-sky-500/10 via-transparent to-blue-500/10 p-4">
