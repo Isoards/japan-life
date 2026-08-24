@@ -99,6 +99,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `/cooking/discover`: 국가·재료 상태별 요리 탐색
 - `/cooking/dishes/[id]`: 재료 상태·대체재·외부 레시피 상세
 - `/cooking/shopping`: 단일 재료 구매 시 새롭게 가능한 요리 순위
+- `/cooking/receipt`: 일본 영수증 촬영, OCR 결과 검토 및 Pantry 일괄 추가
 
 ### 5.2 JSON Store APIs
 
@@ -127,6 +128,9 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `GET /api/sheets/trend?months=6`: recent monthly trend
 - `GET /api/sheets/recurring?months=6`: recurring expense candidates
 - `GET /api/cooking/overview`: Pantry 기준 추천과 Unlock 계산 결과
+- `POST /api/cooking/receipt/ocr`: multipart 영수증 이미지를 서버 OCR로 처리
+- `POST /api/cooking/receipt/parse`: 일반 문자열 행을 결정적 품목 파서로 분석
+- `POST /api/cooking/receipt/confirm`: 검토된 Ingredient ID를 Pantry에 중복 없이 병합
 
 ## 6. Domain Notes
 
@@ -187,7 +191,7 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 - `data/artists.json`
 - `data/concerts.json`
 - `data/checklist-defaults.json`
-- `data/cooking-ingredients.json`: 한국어 우선 식재료 136개와 일본 현지명
+- `data/cooking-ingredients.json`: 한국어 우선 식재료 142개와 일본 현지명
 - `data/cooking-dishes.json`: 자취 요리 117개와 중요도별 식재료 관계
 - `data/cooking-relations.json`: 동등·대체·유사 식재료 관계
 - `data/cooking-recipe-sources.json`: 외부 레시피 검색 출처
@@ -203,7 +207,7 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 - `data/user/user-concerts.json`
 - `data/user/packages.json` when created
 - `data/user/cooking-pantry.json` when the pantry is changed
-- `data/user/cooking-cooked.json` when a dish is marked as cooked
+- `data/user/cooking-cooked.json`: 날짜, 참고 URL, 메모를 포함한 반복 조리 이력
 
 `data/user` is runtime storage and should not be used as static seed data.
 
@@ -211,11 +215,32 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 
 `lib/cooking`은 정적 데이터/파일 저장과 추천 규칙을 분리한다. `recommendation.ts`는 REQUIRED를 가장 크게 가중하고 IMPORTANT, OPTIONAL 순으로 적합도를 계산한다. UI의 `바로 가능`은 REQUIRED와 IMPORTANT가 모두 충족된 경우만 의미하며 OPTIONAL은 판정을 막지 않는다. GOOD 대체재는 해당 재료를 충족한 것으로 처리하며 그 외 대체재는 부분 점수로 반영한다. `unlock.ts`는 Pantry에 없는 재료를 하나씩 가상 추가해 새롭게 `canCookNow`가 되는 요리를 계산한다. 두 모듈은 평범한 배열을 입력받는 순수 함수이므로 저장소를 바꾸어도 다시 사용할 수 있다.
 
+### 7.4 Receipt OCR and pantry import
+
+영수증 기능은 책임을 네 단계로 분리한다.
+
+```text
+mobile image → /receipt/ocr → ReceiptOcrProvider (Google Cloud Vision)
+             → raw string lines → /receipt/parse
+             → metadata/non-food rules + alias/substring/fuzzy matcher
+             → review UI → /receipt/confirm → cooking-pantry store
+             → /api/cooking/overview SWR revalidation
+```
+
+- `lib/cooking/ocr`: 교체 가능한 `ReceiptOcrProvider`와 Google Cloud Vision REST 구현. 서버 환경 변수만 사용한다.
+- `lib/cooking/receipt`: OCR과 무관한 순수 문자열 정리, 메타데이터 필터, 식품 분류, Ingredient 점수 매칭, Pantry 병합.
+- `Ingredient.receiptAliasesJa`: 정식 일본어 이름과 별개인 영수증 축약·PB 표기를 보관한다. 새 표기는 Ingredient를 복제하지 않고 이 배열에 추가한다.
+- 0.90 이상은 높은 신뢰도로 자동 선택하고, 0.70–0.89는 선택하되 검토 대상으로 표시하며, 그 미만은 사용자가 후보 또는 전체 Ingredient 검색으로 정한다.
+- 확정 API는 기존 Pantry 항목을 유지하고 새 ID만 원자적 JSON 쓰기로 추가한다. 완료 후 overview가 다시 계산되어 홈·요리 찾기·장보기 결과에 즉시 반영된다.
+- 업로드는 이미지 형식과 10MB 제한을 검사하며 메모리에만 머문다. 원본 이미지, 전체 OCR 텍스트, 결제 관련 행은 저장하지 않는다.
+
 ## 8. External Configuration
 
 - `GOOGLE_SHEETS_API_KEY`: required for `/api/sheets`, `/api/sheets/trend`, `/api/sheets/recurring`
 - `DATA_DIR`: optional override for runtime JSON store path
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: documented env, currently not central to active pages
+- `RECEIPT_OCR_PROVIDER`: optional, defaults to `google-cloud-vision`
+- `GOOGLE_CLOUD_VISION_API_KEY`: server-only key required by receipt OCR
 
 ## 9. Build and Deployment
 

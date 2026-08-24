@@ -13,7 +13,8 @@ export default function CookingHomeClient() {
   const cookNow = data.recommendations.filter((result) => result.canCookNow).slice(0, 4);
   const oneAway = data.recommendations.filter((result) => result.missingCoreCount === 1).slice(0, 4);
   const topUnlock = data.unlocks[0];
-  const cookedIds = new Set(data.cookedDishes.items.map((item) => item.dishId));
+  const cookedByDish = new Map<string, typeof data.cookedDishes.items>();
+  for (const item of data.cookedDishes.items) cookedByDish.set(item.dishId, [...(cookedByDish.get(item.dishId) ?? []), item]);
 
   return (
     <div className="space-y-8">
@@ -23,8 +24,13 @@ export default function CookingHomeClient() {
         <SummaryCard icon="🥬" label="보유 식재료" value={`${data.pantry.items.length}개`} href="/cooking/pantry" />
         <SummaryCard icon="🍚" label="바로 가능한 요리" value={`${data.recommendations.filter((item) => item.canCookNow).length}개`} href="/cooking/discover?filter=now" />
         <SummaryCard icon="🛒" label="한 개만 더 사면" value={`${data.recommendations.filter((item) => item.missingCoreCount === 1).length}개`} href="/cooking/discover?filter=one" />
-        <SummaryCard icon="👨‍🍳" label="해본 요리" value={`${data.cookedDishes.items.length}개`} href="/cooking/discover?filter=cooked" />
+        <SummaryCard icon="👨‍🍳" label="해본 요리" value={`${cookedByDish.size}개`} href="/cooking/discover?filter=cooked" />
       </div>
+
+      <Link href="/cooking/receipt" className="flex min-h-14 items-center justify-between rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100 transition hover:bg-emerald-500/15">
+        <span><strong>🧾 영수증으로 재료 추가</strong><span className="ml-2 text-emerald-200/60">일본어 품목을 확인하고 한 번에 Pantry로</span></span>
+        <span>읽기 →</span>
+      </Link>
 
       {data.pantry.items.length === 0 && (
         <Link href="/cooking/pantry" className="flex items-center justify-between rounded-xl border border-dashed border-orange-400/30 bg-orange-500/5 p-5 text-sm text-orange-100 hover:bg-orange-500/10">
@@ -34,11 +40,11 @@ export default function CookingHomeClient() {
       )}
 
       <Section title="지금 만들 수 있어요" action="전체 보기" href="/cooking/discover?filter=now">
-        {cookNow.length ? <div className="grid gap-3 md:grid-cols-2">{cookNow.map((result) => <DishCard key={result.dish.id} result={result} cooked={cookedIds.has(result.dish.id)} />)}</div> : <Empty text="필수 재료가 모두 갖춰진 요리가 아직 없어요." />}
+        {cookNow.length ? <div className="grid gap-3 md:grid-cols-2">{cookNow.map((result) => <DishCard key={result.dish.id} result={result} cookedItems={cookedByDish.get(result.dish.id)} />)}</div> : <Empty text="필수 재료가 모두 갖춰진 요리가 아직 없어요." />}
       </Section>
 
       <Section title="재료 하나만 더 있으면" action="전체 보기" href="/cooking/discover?filter=one">
-        {oneAway.length ? <div className="grid gap-3 md:grid-cols-2">{oneAway.map((result) => <DishCard key={result.dish.id} result={result} cooked={cookedIds.has(result.dish.id)} />)}</div> : <Empty text="Pantry를 채우면 가까운 요리를 찾아드릴게요." />}
+        {oneAway.length ? <div className="grid gap-3 md:grid-cols-2">{oneAway.map((result) => <DishCard key={result.dish.id} result={result} cookedItems={cookedByDish.get(result.dish.id)} />)}</div> : <Empty text="Pantry를 채우면 가까운 요리를 찾아드릴게요." />}
       </Section>
 
       <Section title="가장 효과적인 다음 장보기" action="장보기 추천" href="/cooking/shopping">

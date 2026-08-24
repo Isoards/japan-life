@@ -159,6 +159,32 @@ export const pantryItemSchema = z.object({
   storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
 });
 
+export const receiptParseSchema = z.object({
+  lines: z.array(z.string().max(500)).min(1).max(300),
+});
+
+export const receiptConfirmSchema = z.object({
+  ingredientIds: z.array(z.string().min(1)).max(200),
+  storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
+});
+
+export const cookingLogSchema = z.object({
+  dishId: z.string().min(1),
+  cookedOn: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "날짜 형식은 YYYY-MM-DD여야 합니다")
+    .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), "올바른 날짜를 입력해 주세요"),
+  sourceTitle: z.string().trim().max(120).optional().default(""),
+  sourceUrl: z.string().trim().max(2048).refine((value) => {
+    if (!value) return true;
+    try {
+      return ["http:", "https:"].includes(new URL(value).protocol);
+    } catch {
+      return false;
+    }
+  }, "HTTP 또는 HTTPS 주소를 입력해 주세요").optional().default(""),
+  note: z.string().trim().max(500).optional().default(""),
+});
+
 /** Parse with zod - returns data or a string error message. */
 export function parseOrError<T>(schema: z.ZodType<T>, data: unknown): { ok: true; data: T } | { ok: false; error: string } {
   const result = schema.safeParse(data);

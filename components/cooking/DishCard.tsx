@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CUISINE_LABELS, displayDishName } from "@/lib/cooking/names";
-import type { DishRecommendation } from "@/lib/cooking/types";
+import type { CookedDishItem, DishRecommendation } from "@/lib/cooking/types";
 import CookedButton from "./CookedButton";
 
-export default function DishCard({ result, cooked = false }: { result: DishRecommendation; cooked?: boolean }) {
+export default function DishCard({ result, cookedItems = [] }: { result: DishRecommendation; cookedItems?: CookedDishItem[] }) {
   const missingCount = result.missingRequired.length + result.missingImportant.length;
+  const latest = cookedItems.reduce<CookedDishItem | undefined>((current, item) => !current || item.cookedAt > current.cookedAt ? item : current, undefined);
+  const cooked = cookedItems.length > 0;
   return (
     <div className={`group rounded-xl border bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-orange-400/30 hover:bg-white/[0.07] ${cooked ? "border-sky-400/25" : "border-white/10"}`}>
       <Link href={`/cooking/dishes/${result.dish.id}`} className="block">
@@ -24,6 +26,7 @@ export default function DishCard({ result, cooked = false }: { result: DishRecom
         <span className="text-xs font-mono text-gray-400">{result.matchPercent}%</span>
       </div>
         {missingCount > 0 && <p className="mt-2 truncate text-xs text-gray-500">부족: {[...result.missingRequired, ...result.missingImportant].map((item) => item.nameKo).join(", ")}</p>}
+        {latest && <p className="mt-2 text-xs text-sky-300">최근 {new Date(latest.cookedAt).toLocaleDateString("ko-KR")} · 총 {cookedItems.length}회</p>}
       </Link>
       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
         <Link href={`/cooking/dishes/${result.dish.id}`} className="text-xs text-orange-300 hover:text-orange-200">상세 보기 →</Link>

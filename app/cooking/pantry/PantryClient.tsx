@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { mutate } from "swr";
 import CookingHeader from "@/components/cooking/CookingHeader";
 import { CATEGORY_LABELS, STORAGE_LABELS } from "@/lib/cooking/names";
@@ -8,16 +9,21 @@ import type { IngredientCategory, StorageLocation } from "@/lib/cooking/types";
 import { INGREDIENT_CATEGORIES } from "@/lib/cooking/types";
 import { mutateAPI, useCookingOverview } from "@/lib/hooks/use-api";
 
+type PantryFilter = IngredientCategory | "ALL" | "OWNED";
+
 export default function PantryClient() {
   const { data, isLoading } = useCookingOverview();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<IngredientCategory | "ALL">("ALL");
+  const [category, setCategory] = useState<PantryFilter>("ALL");
   const [busy, setBusy] = useState<string | null>(null);
   const ownedMap = useMemo(() => new Map(data?.pantry.items.map((item) => [item.ingredientId, item]) ?? []), [data]);
   const filtered = useMemo(() => (data?.ingredients ?? []).filter((ingredient) => {
     const q = query.trim().toLowerCase();
-    return (category === "ALL" || ingredient.category === category) && (!q || [ingredient.nameKo, ingredient.nameJa, ...(ingredient.aliasesKo ?? []), ...(ingredient.aliasesJa ?? [])].some((value) => value?.toLowerCase().includes(q)));
-  }), [data, query, category]);
+    const categoryMatches = category === "ALL"
+      || ingredient.category === category
+      || (category === "OWNED" && ownedMap.has(ingredient.id));
+    return categoryMatches && (!q || [ingredient.nameKo, ingredient.nameJa, ...(ingredient.aliasesKo ?? []), ...(ingredient.aliasesJa ?? []), ...(ingredient.receiptAliasesJa ?? [])].some((value) => value?.toLowerCase().includes(q)));
+  }), [data, query, category, ownedMap]);
 
   async function toggle(id: string) {
     setBusy(id);
@@ -36,9 +42,15 @@ export default function PantryClient() {
   return (
     <div className="space-y-7">
       <CookingHeader title="우리 집 식재료" description="수량은 신경 쓰지 말고, 지금 사용할 수 있는 재료만 가볍게 등록하세요." />
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="한국어·일본어로 재료 검색" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-orange-400/40" />
-        <select value={category} onChange={(event) => setCategory(event.target.value as IngredientCategory | "ALL")} className="rounded-xl border border-white/10 bg-gray-950 px-4 py-3 text-sm text-white outline-none"><option value="ALL">전체 카테고리</option>{INGREDIENT_CATEGORIES.map((value) => <option key={value} value={value}>{CATEGORY_LABELS[value]}</option>)}</select>
+      <Link href="/cooking/receipt" className="flex min-h-12 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/20">🧾 영수증으로 재료 추가</Link>
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="굴소스·간장처럼 한국어·일본어로 검색" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-gray-950/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-orange-400/40" />
+          <select value={category} onChange={(event) => setCategory(event.target.value as PantryFilter)} className="rounded-xl border border-white/10 bg-gray-950 px-4 py-3 text-sm text-white outline-none"><option value="ALL">전체 카테고리</option><option value="OWNED">보유 중</option>{INGREDIENT_CATEGORIES.map((value) => <option key={value} value={value}>{CATEGORY_LABELS[value]}</option>)}</select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => { setCategory("OWNED"); setQuery(""); }} className={`cursor-pointer rounded-full px-3 py-1.5 text-xs transition ${category === "OWNED" ? "bg-orange-400 text-gray-950" : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"}`}>✓ 보유 재료만</button>
+        </div>
       </div>
       <div className="flex items-center justify-between text-sm"><p className="text-gray-500">검색 결과 {filtered.length}개</p><p className="font-medium text-orange-300">보유 {data?.pantry.items.length ?? 0}개</p></div>
       {isLoading ? <p className="py-16 text-center text-gray-500">식재료를 불러오는 중...</p> : (

@@ -22,7 +22,7 @@ const STORE_VERSIONS: Record<string, number> = {
   garbage: 1,
   packages: 1,
   "cooking-pantry": 1,
-  "cooking-cooked": 1,
+  "cooking-cooked": 2,
 };
 
 /**
@@ -30,6 +30,21 @@ const STORE_VERSIONS: Record<string, number> = {
  * 예: budget v1 → v2: sheetCategories 필드 보장
  */
 const MIGRATIONS: Record<string, Record<number, Migration>> = {
+  "cooking-cooked": {
+    1: (data: unknown) => {
+      if (!isPlainObject(data) || !Array.isArray(data.items)) return data;
+      return {
+        ...data,
+        items: data.items.map((item, index) => {
+          const record = item as Record<string, unknown>;
+          return {
+            ...record,
+            id: record.id ?? `legacy-${String(record.dishId ?? "dish")}-${String(record.cookedAt ?? index)}`,
+          };
+        }),
+      };
+    },
+  },
   notes: {
     1: (data: unknown) => {
       if (!Array.isArray(data)) return data;

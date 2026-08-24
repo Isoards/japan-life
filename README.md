@@ -31,8 +31,9 @@
   - Pantry 식재료 등록, 보유 재료 기반 요리 추천
   - 한식·일식·중식·양식 탐색과 일본 장보기 명칭
   - 재료 하나로 새롭게 가능한 요리를 계산하는 Unlock 장보기 추천
-  - 해본 요리 체크 및 모아보기
-  - 일본 마트 중심 식재료 136개와 자취 요리 117개 제공
+  - 날짜·참고 영상/레시피·메모가 포함된 반복 조리 기록 및 모아보기
+  - 양념·소스 빠른 탐색, 일본 마트 중심 식재료 142개와 자취 요리 117개 제공
+  - 일본 슈퍼 영수증 OCR, 한국어 식재료 확인·수정 후 Pantry 일괄 추가
 
 ## 기술 스택
 
@@ -59,6 +60,8 @@ npm ci
 ```bash
 GOOGLE_SHEETS_API_KEY=your_key
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key
+RECEIPT_OCR_PROVIDER=google-cloud-vision
+GOOGLE_CLOUD_VISION_API_KEY=your_google_cloud_vision_key
 ```
 
 ### 3) 개발 서버 실행
@@ -101,9 +104,17 @@ npm run start
 - `user-concerts.json`
 - `packages.json` (필요 시 생성)
 - `cooking-pantry.json` (Pantry 변경 시 생성)
-- `cooking-cooked.json` (해본 요리 체크 시 생성)
+- `cooking-cooked.json` (조리 이력 저장 시 생성)
 
 `data/user`는 런타임 저장소이며 API CRUD 결과가 이 파일들에 반영됩니다.
+
+## 영수증 OCR 설정
+
+`/cooking/receipt`는 Google Cloud Vision의 `DOCUMENT_TEXT_DETECTION`을 서버에서 호출합니다. Google Cloud 프로젝트에서 Vision API를 활성화하고 `GOOGLE_CLOUD_VISION_API_KEY`를 설정하세요. `RECEIPT_OCR_PROVIDER`의 현재 지원값은 `google-cloud-vision`이며 생략해도 이 값이 기본입니다. 키는 브라우저로 전달되지 않습니다.
+
+처리 흐름은 `사진 업로드 → OCR → 결정적 품목 분류/Ingredient alias 매칭 → 사용자 검토 → Pantry 확정`입니다. `receiptAliasesJa`에 영수증 축약 표기를 추가하면 모델이나 DB 변경 없이 매칭 사전을 확장할 수 있습니다. 사진과 전체 OCR 결과는 저장하거나 서버 로그에 남기지 않으며, 합계·세금·결제·포인트 행은 분석에서 제외합니다.
+
+현재 영수증 기능은 수량·가격·유통기한 추정, 바코드, 이미지 보관, 새 Ingredient 자동 생성을 지원하지 않습니다. 흐리거나 구겨진 사진, 손글씨, 마트 고유의 지나친 축약 표기는 검토 화면에서 직접 기존 Ingredient를 선택해야 할 수 있습니다.
 
 ## Docker 실행
 

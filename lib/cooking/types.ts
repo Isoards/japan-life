@@ -16,7 +16,45 @@ export interface Ingredient {
   nameJa?: string;
   aliasesKo?: string[];
   aliasesJa?: string[];
+  /** 일본 마트 영수증에서 자주 쓰이는 축약명·표기 변형 */
+  receiptAliasesJa?: string[];
   shoppingHintJa?: string;
+}
+
+export interface ReceiptOcrLine {
+  rawText: string;
+  normalizedText: string;
+  lineIndex: number;
+}
+
+export type ReceiptItemType = "FOOD" | "NON_FOOD" | "UNKNOWN";
+
+export interface ReceiptIngredientCandidate {
+  ingredientId: string;
+  confidence: number;
+  reason?: string;
+}
+
+export interface ReceiptParsedItem {
+  id: string;
+  rawText: string;
+  normalizedText: string;
+  itemType: ReceiptItemType;
+  matchedIngredientId?: string;
+  candidates: ReceiptIngredientCandidate[];
+  confidence: number;
+  selected: boolean;
+}
+
+export interface ReceiptParseResult {
+  items: ReceiptParsedItem[];
+  ignoredLineCount: number;
+}
+
+export interface ReceiptConfirmResult {
+  pantry: PantryData;
+  addedIngredientIds: string[];
+  alreadyOwnedIngredientIds: string[];
 }
 
 export interface IngredientRelation {
@@ -67,8 +105,12 @@ export interface PantryData {
 }
 
 export interface CookedDishItem {
+  id: string;
   dishId: string;
   cookedAt: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
+  note?: string;
 }
 
 export interface CookedDishesData {
