@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
 import type { GarbageScheduleData } from "@/lib/types";
-import { DEFAULT_GARBAGE_ENTRIES } from "@/lib/constants/garbage";
+import {
+  DEFAULT_GARBAGE_ENTRIES,
+  GARBAGE_REGION,
+  GARBAGE_SOURCE_URL,
+  GARBAGE_VALID_THROUGH,
+} from "@/lib/constants/garbage";
 import { garbageScheduleSchema, parseOrError } from "@/lib/validations";
 
 const STORE_NAME = "garbage";
@@ -11,7 +16,9 @@ export async function GET() {
   if (data === null) {
     const defaults: GarbageScheduleData = {
       entries: DEFAULT_GARBAGE_ENTRIES,
-      region: "栃木県",
+      region: GARBAGE_REGION,
+      sourceUrl: GARBAGE_SOURCE_URL,
+      validThrough: GARBAGE_VALID_THROUGH,
     };
     return NextResponse.json(defaults);
   }

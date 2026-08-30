@@ -6,6 +6,7 @@ import Image from "next/image";
 import { getHighResArtwork, formatDuration } from "@/lib/itunes";
 import { getUpcomingMilestones } from "@/lib/milestoneUtils";
 import MusicButton from "@/components/MusicButton";
+import TodayActionCenter, { type TodayAction } from "@/components/TodayActionCenter";
 import {
   useFavorites,
   useChecklist,
@@ -18,15 +19,20 @@ import {
   useGarbageSchedule,
   usePackages,
   useCookingOverview,
+  useMealPlan,
+  useSettings,
 } from "@/lib/hooks/use-api";
 import { getUpcomingHolidays } from "@/lib/constants/holidays";
 import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather";
-import { DAY_LABELS } from "@/lib/constants/garbage";
+import { DAY_LABELS, isGarbageCollectionOn } from "@/lib/constants/garbage";
+import { dateKeyInTokyo } from "@/lib/cooking/freshness";
+import { displayDishName } from "@/lib/cooking/names";
+import { DEFAULT_USER_SETTINGS, isLivingMode } from "@/lib/settings";
 
 const DASHBOARD_RENDER_TIME = Date.now();
-const DEPARTURE_DATE = new Date("2026-03-18T00:00:00+09:00");
 
-export default function DashboardClient() {
+export default function DashboardClient({ initialNow }: { initialNow: string }) {
+  const { data: settings = DEFAULT_USER_SETTINGS } = useSettings();
   const { data: favorites = [] } = useFavorites();
   const { data: checklist = [] } = useChecklist();
   const { data: concerts = [] } = useConcerts();
@@ -100,17 +106,19 @@ export default function DashboardClient() {
   const { data: garbageSchedule } = useGarbageSchedule();
   const { data: packages = [] } = usePackages();
   const { data: cookingOverview, isLoading: cookingLoading } = useCookingOverview();
+  const { data: mealPlan, isLoading: mealPlanLoading } = useMealPlan();
 
   const upcomingHolidays = useMemo(() => getUpcomingHolidays(3), []);
 
   const garbageToday = useMemo(() => {
-    const today = new Date().getDay();
-    return garbageSchedule?.entries.filter((e) => e.dayOfWeek.includes(today)) ?? [];
+    const today = new Date();
+    return garbageSchedule?.entries.filter((entry) => isGarbageCollectionOn(entry, today)) ?? [];
   }, [garbageSchedule]);
 
   const garbageTomorrow = useMemo(() => {
-    const tomorrow = (new Date().getDay() + 1) % 7;
-    return garbageSchedule?.entries.filter((e) => e.dayOfWeek.includes(tomorrow)) ?? [];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return garbageSchedule?.entries.filter((entry) => isGarbageCollectionOn(entry, tomorrow)) ?? [];
   }, [garbageSchedule]);
 
   const activePackages = useMemo(
@@ -118,16 +126,21 @@ export default function DashboardClient() {
     [packages],
   );
 
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date(initialNow));
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
+  const moveDate = useMemo(
+    () => new Date(`${settings.moveDate}T00:00:00+09:00`),
+    [settings.moveDate],
+  );
   const { dDay, isInJapan, days, hours, minutes, seconds } = useMemo(() => {
-    const diff = DEPARTURE_DATE.getTime() - now.getTime();
-    const inJapan = diff <= 0;
-    const absDiff = Math.abs(diff);
+    const inJapan = isLivingMode(settings, now);
+    const absDiff = inJapan
+      ? Math.max(0, now.getTime() - moveDate.getTime())
+      : Math.max(0, moveDate.getTime() - now.getTime());
     const d = Math.floor(absDiff / (1000 * 60 * 60 * 24));
     const h = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const m = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
@@ -140,7 +153,165 @@ export default function DashboardClient() {
       minutes: m,
       seconds: s,
     };
-  }, [now]);
+  }, [moveDate, now, settings]);
+
+  const dashboardDateKey = dateKeyInTokyo(now);
+  const todayActions = useMemo<TodayAction[]>(() => {
+    const actions: TodayAction[] = [];
+    const todayKey = dashboardDateKey;
+    const today = new Date(`${todayKey}T12:00:00+09:00`);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowKey = dateKeyInTokyo(tomorrow);
+    const ingredientById = new Map((cookingOverview?.ingredients ?? []).map((ingredient) => [ingredient.id, ingredient]));
+
+    const urgentFreshness = (cookingOverview?.freshness ?? []).filter((item) => item.status === "EXPIRED" || item.status === "TODAY");
+    if (urgentFreshness.length > 0) {
+      const names = urgentFreshness.map((item) => ingredientById.get(item.ingredientId)?.nameKo).filter(Boolean);
+      actions.push({
+        id: "freshness-urgent",
+        title: `사용일을 확인할 재료 ${urgentFreshness.length}개`,
+        detail: names.slice(0, 4).join(", ") || "Pantry에서 상태를 확인해 주세요.",
+        href: "/cooking/pantry",
+        icon: "⏳",
+        tone: "urgent",
+      });
+    }
+
+    if (garbageToday.length > 0) {
+      actions.push({
+        id: `garbage-${todayKey}`,
+        title: `오늘 ${garbageToday.map((item) => item.label).join(", ")} 수거`,
+        detail: "수거 당일 오전 8시까지 지정 장소에 배출해요.",
+        href: "/garbage",
+        icon: "🗑️",
+        tone: "urgent",
+      });
+    }
+
+    if (budgetTotal > 0 && budgetRemaining < 0) {
+      actions.push({
+        id: `budget-over-${currentMonth}`,
+        title: `이번 달 예산을 ¥${Math.abs(budgetRemaining).toLocaleString("ko-KR")} 초과했어요`,
+        detail: `지출 ¥${budgetSpent.toLocaleString("ko-KR")} · 예산 ¥${budgetTotal.toLocaleString("ko-KR")}`,
+        href: "/expenses",
+        icon: "💸",
+        tone: "urgent",
+      });
+    } else if (budgetTotal > 0 && budgetSpent / budgetTotal >= 0.8) {
+      actions.push({
+        id: `budget-warning-${currentMonth}`,
+        title: "이번 달 예산의 80% 이상을 사용했어요",
+        detail: `남은 예산 ¥${budgetRemaining.toLocaleString("ko-KR")}`,
+        href: "/expenses",
+        icon: "💰",
+        tone: "attention",
+      });
+    }
+
+    upcomingMilestones.slice(0, 3).forEach((milestone) => {
+      actions.push({
+        id: `milestone-${milestone.id}`,
+        title: milestone.label,
+        detail: `${milestone.date === todayKey ? "오늘" : milestone.date.slice(5).replace("-", "/")} · ${milestone.concertTitle}`,
+        href: `/concerts/${milestone.concertId}`,
+        icon: "🎫",
+        tone: milestone.date === todayKey ? "urgent" : "attention",
+      });
+    });
+
+    if (garbageTomorrow.length > 0) {
+      actions.push({
+        id: `garbage-${tomorrowKey}`,
+        title: `내일 ${garbageTomorrow.map((item) => item.label).join(", ")} 수거`,
+        detail: "오늘 저녁에 미리 분리해 두세요.",
+        href: "/garbage",
+        icon: "♻️",
+        tone: "attention",
+      });
+    }
+
+    const soonFreshness = (cookingOverview?.freshness ?? []).filter((item) => item.status === "SOON");
+    if (soonFreshness.length > 0) {
+      const names = soonFreshness.map((item) => ingredientById.get(item.ingredientId)?.nameKo).filter(Boolean);
+      actions.push({
+        id: "freshness-soon",
+        title: `먼저 사용하면 좋은 재료 ${soonFreshness.length}개`,
+        detail: names.slice(0, 4).join(", "),
+        href: "/cooking",
+        icon: "🥬",
+        tone: "attention",
+      });
+    }
+
+    if (!mealPlanLoading) {
+      const meals = (mealPlan?.items ?? []).filter((item) => item.date === todayKey);
+      const dishById = new Map((cookingOverview?.recommendations ?? []).map((item) => [item.dish.id, item.dish]));
+      if (meals.length === 0) {
+        actions.push({
+          id: `meal-empty-${todayKey}`,
+          title: "오늘 식단이 아직 비어 있어요",
+          detail: "Pantry 재료를 반영한 추천에서 점심과 저녁을 골라보세요.",
+          href: "/cooking/planner",
+          icon: "🍽️",
+          tone: "attention",
+        });
+      } else {
+        const mealNames = meals.map((item) => {
+          const dish = dishById.get(item.dishId);
+          return dish ? displayDishName(dish) : "등록된 메뉴";
+        });
+        actions.push({
+          id: `meal-${todayKey}`,
+          title: `오늘 식단 · ${mealNames.join(", ")}`,
+          detail: meals.length < 2 ? "비어 있는 시간대의 메뉴도 정할 수 있어요." : "오늘 계획한 메뉴를 확인하세요.",
+          href: "/cooking/planner",
+          icon: "🍳",
+          tone: "info",
+        });
+      }
+    }
+
+    const relevantChecklist = checklist.filter((item) => {
+      if (item.checked || item.priority !== "high") return false;
+      return !isLivingMode(settings, today) || item.category !== "pre-departure";
+    });
+    if (relevantChecklist.length > 0) {
+      actions.push({
+        id: "checklist-high",
+        title: `중요 체크리스트 ${relevantChecklist.length}개 남음`,
+        detail: relevantChecklist.slice(0, 2).map((item) => item.title).join(" · "),
+        href: "/checklist",
+        icon: "✅",
+        tone: "info",
+      });
+    }
+
+    if (activePackages.length > 0) {
+      actions.push({
+        id: "packages-active",
+        title: `배송 중인 택배 ${activePackages.length}건`,
+        detail: activePackages.slice(0, 2).map((item) => item.description).join(" · "),
+        href: "/packages",
+        icon: "📦",
+        tone: "info",
+      });
+    }
+
+    if (Number(todayKey.slice(8, 10)) === settings.payday) {
+      actions.push({
+        id: `payday-${todayKey}`,
+        title: "오늘은 설정한 월급일이에요",
+        detail: "입금 내역과 이번 달 예산을 확인해 보세요.",
+        href: "/expenses",
+        icon: "🏦",
+        tone: "info",
+      });
+    }
+
+    const order = { urgent: 0, attention: 1, info: 2 };
+    return actions.sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 10);
+  }, [activePackages, budgetRemaining, budgetSpent, budgetTotal, checklist, cookingOverview, currentMonth, dashboardDateKey, garbageToday, garbageTomorrow, mealPlan, mealPlanLoading, settings, upcomingMilestones]);
 
   return (
     <div className="space-y-10">
@@ -195,11 +366,16 @@ export default function DashboardClient() {
           </div>
           <p className="text-xs text-gray-500 mt-3">
             {isInJapan
-              ? `${DEPARTURE_DATE.toLocaleDateString("ko-KR")} 도일`
-              : `${DEPARTURE_DATE.toLocaleDateString("ko-KR")} 출발 예정`}
+              ? `${moveDate.toLocaleDateString("ko-KR")} 도일`
+              : `${moveDate.toLocaleDateString("ko-KR")} 출발 예정`}
           </p>
+          <Link href="/settings" className="mt-3 inline-flex items-center gap-1 text-[11px] text-gray-600 transition hover:text-purple-300">
+            ⚙️ 생활 기준 변경
+          </Link>
         </div>
       </div>
+
+      <TodayActionCenter actions={todayActions} />
 
       {/* 요리 / 영수증 빠른 실행 */}
       <section>
@@ -234,7 +410,7 @@ export default function DashboardClient() {
       <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-sky-500/10 via-transparent to-blue-500/10 p-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-lg">🌤️</span>
-          <span className="text-sm font-medium text-gray-400">도치기현 날씨</span>
+          <span className="truncate text-sm font-medium text-gray-400">{weather?.locationLabel ?? settings.residenceLabel} 날씨</span>
           {weatherLoading && (
             <div className="w-3 h-3 border border-sky-400 border-t-transparent rounded-full animate-spin ml-auto" />
           )}
@@ -501,46 +677,6 @@ export default function DashboardClient() {
           </div>
         </Link>
       </div>
-
-      {/* 이번 주 마감 카드 */}
-      {upcomingMilestones.length > 0 && (
-        <Link href="/concerts">
-          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/10 via-transparent to-amber-500/10 p-4 hover:border-rose-500/30 transition-all">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">📋</span>
-              <span className="text-sm font-medium text-gray-400">
-                이번 주 마감
-              </span>
-              <span className="ml-auto text-xs text-rose-400">
-                {upcomingMilestones.length}건
-              </span>
-            </div>
-            <div className="space-y-2">
-              {upcomingMilestones.slice(0, 3).map((ms) => (
-                <div
-                  key={ms.id}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-white truncate">{ms.label}</p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {ms.concertTitle}
-                    </p>
-                  </div>
-                  <span className="text-xs text-amber-400 font-mono shrink-0">
-                    {ms.date.slice(5)}
-                  </span>
-                </div>
-              ))}
-              {upcomingMilestones.length > 3 && (
-                <p className="text-xs text-gray-500">
-                  +{upcomingMilestones.length - 3}건 더
-                </p>
-              )}
-            </div>
-          </div>
-        </Link>
-      )}
 
       {favorites.length > 0 && (
         <section>

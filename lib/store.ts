@@ -2,6 +2,12 @@ import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
 import { DEFAULT_BUDGET_CATEGORIES } from "./constants/budget";
+import {
+  DEFAULT_GARBAGE_ENTRIES,
+  GARBAGE_REGION,
+  GARBAGE_SOURCE_URL,
+  GARBAGE_VALID_THROUGH,
+} from "./constants/garbage";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data", "user");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
@@ -19,11 +25,12 @@ const STORE_VERSIONS: Record<string, number> = {
   favorites: 1,
   links: 1,
   "user-concerts": 2,
-  garbage: 1,
+  garbage: 2,
   packages: 1,
   "cooking-pantry": 2,
   "cooking-cooked": 2,
   "cooking-meal-plan": 1,
+  settings: 1,
 };
 
 /**
@@ -31,6 +38,18 @@ const STORE_VERSIONS: Record<string, number> = {
  * 예: budget v1 → v2: sheetCategories 필드 보장
  */
 const MIGRATIONS: Record<string, Record<number, Migration>> = {
+  garbage: {
+    1: () => ({
+      entries: DEFAULT_GARBAGE_ENTRIES.map((entry) => ({
+        ...entry,
+        dayOfWeek: [...entry.dayOfWeek],
+        collectionDates: entry.collectionDates ? [...entry.collectionDates] : undefined,
+      })),
+      region: GARBAGE_REGION,
+      sourceUrl: GARBAGE_SOURCE_URL,
+      validThrough: GARBAGE_VALID_THROUGH,
+    }),
+  },
   "cooking-pantry": {
     1: (data: unknown) => {
       if (!isPlainObject(data) || !Array.isArray(data.items)) return data;

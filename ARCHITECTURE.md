@@ -6,7 +6,7 @@ Japan Life Dashboard는 일본 생활/정착을 관리하는 개인용 Next.js �
 
 ### Current Domains
 
-- **Dashboard**: 체크리스트, 예산 잔액, 콘서트, 환율, 날씨, 공휴일, 쓰레기, 택배, 최신 발매 요약과 요리/영수증 빠른 진입점.
+- **Dashboard**: 체크리스트, 예산 잔액, 콘서트, 환율, 날씨, 공휴일, 쓰레기, 택배, 최신 발매 요약과 식재료·예산·쓰레기·티켓·식단을 통합한 오늘 할 일 센터.
 - **Music**: 아티스트 검색, 즐겨찾기, iTunes 기반 상세/최신곡, Apple Music JP Top100.
 - **Concerts**: 일정 CRUD, 티켓 마일스톤, 공지 URL/텍스트 import.
 - **Checklist**: 출국/정착/생활/업무/재정 체크리스트.
@@ -14,6 +14,7 @@ Japan Life Dashboard는 일본 생활/정착을 관리하는 개인용 Next.js �
 - **Expenses**: 5개 대분류 예산 플래너, Google Sheets 월별 집계, 전월 급여 기반 예상 수입, 지출 차트, 정기 지출 탐지, 다중 카테고리 영수증 등록.
 - **Notes**: 일본어/업무/EV/SW 메모, 템플릿, SRS 퀴즈, 링크 관리.
 - **Life Tools**: 노래방 검색, 쓰레기 수거 일정, 택배 관리, PWA offline fallback.
+- **Settings**: 생활 단계, 이주일, 거주지 날씨 좌표와 월급일을 관리하는 개인 설정.
 - **Cooking**: 자동 보관 Pantry, 신선식품 권장 사용일, 결정론적 요리·대체재 추천, 주간 식단, 식단/Unlock 장보기, 영수증 기반 Pantry 등록.
 
 ## 2. Technology
@@ -76,7 +77,8 @@ docs/                   Review notes and planning docs
 - `user-concerts: v2`
 - `cooking-cooked: v2`
 - `cooking-pantry: v2`
-- `checklist, favorites, links, garbage, packages, cooking-meal-plan: v1`
+- `garbage: v2`
+- `checklist, favorites, links, packages, cooking-meal-plan, settings: v1`
 
 Writes are backed up and saved atomically with a tmp-file + rename/copy fallback.
 
@@ -100,6 +102,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `/garbage`: garbage schedule
 - `/packages`: package tracking
 - `/offline`: PWA offline page
+- `/settings`: 개인 설정
 - `/cooking`: 요리 추천 요약
 - `/cooking/pantry`: 보유 식재료 관리
 - `/cooking/discover`: 국가·재료 상태별 요리 탐색
@@ -122,6 +125,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `GET, POST, PATCH, DELETE /api/cooking/pantry`
 - `GET, POST, DELETE /api/cooking/cooked`
 - `GET, POST, PATCH, DELETE /api/cooking/meal-plan`
+- `GET, POST /api/settings`
 
 ### 5.3 External/Computed APIs
 

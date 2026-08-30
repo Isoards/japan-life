@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
+import { readStore } from "@/lib/store";
+import { DEFAULT_USER_SETTINGS, type UserSettings } from "@/lib/settings";
 
-const OPEN_METEO_URL =
-  "https://api.open-meteo.com/v1/forecast" +
-  "?latitude=36.5657&longitude=139.8836" +
-  "&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m" +
-  "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-  "&timezone=Asia/Tokyo&forecast_days=5";
-
-let cache: { data: unknown; timestamp: number } | null = null;
+let cache: { key: string; data: unknown; timestamp: number } | null = null;
 const CACHE_MS = 15 * 60 * 1000;
 
 export async function GET() {
-  if (cache && Date.now() - cache.timestamp < CACHE_MS) {
+  const stored = await readStore<UserSettings>("settings", DEFAULT_USER_SETTINGS);
+  const settings = { ...DEFAULT_USER_SETTINGS, ...stored };
+  const cacheKey = `${settings.latitude},${settings.longitude},${settings.residenceLabel}`;
+  if (cache?.key === cacheKey && Date.now() - cache.timestamp < CACHE_MS) {
     return NextResponse.json(cache.data);
   }
 
+  const query = new URLSearchParams({
+    latitude: String(settings.latitude),
+    longitude: String(settings.longitude),
+    current: "temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+    timezone: settings.timezone,
+    forecast_days: "5",
+  });
+
   try {
-    const res = await fetch(OPEN_METEO_URL);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`);
     if (!res.ok) {
       return NextResponse.json(
         { error: "날씨 데이터를 가져올 수 없습니다" },
@@ -32,6 +39,7 @@ export async function GET() {
         humidity: raw.current.relative_humidity_2m,
         windSpeed: raw.current.wind_speed_10m,
       },
+      locationLabel: settings.residenceLabel,
       daily: raw.daily.time.map((date: string, i: number) => ({
         date,
         weatherCode: raw.daily.weather_code[i],
@@ -42,7 +50,7 @@ export async function GET() {
       fetchedAt: new Date().toISOString(),
     };
 
-    cache = { data, timestamp: Date.now() };
+    cache = { key: cacheKey, data, timestamp: Date.now() };
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(

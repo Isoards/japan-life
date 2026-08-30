@@ -17,6 +17,7 @@ import type {
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
 import type { CookingOverview, MealPlanData } from "../cooking/types";
+import { DEFAULT_USER_SETTINGS, type UserSettings } from "../settings";
 
 interface SearchResult {
   itunesId: number;
@@ -26,6 +27,13 @@ interface SearchResult {
 }
 
 // ── Data hooks ──
+
+export function useSettings() {
+  return useSWR<UserSettings>("/api/settings", fetcher, {
+    fallbackData: DEFAULT_USER_SETTINGS,
+    revalidateOnFocus: false,
+  });
+}
 
 export function useChecklist() {
   return useSWR<ChecklistItem[]>("/api/checklist", fetcher, {

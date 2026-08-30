@@ -181,6 +181,7 @@ export interface WeatherData {
   current: WeatherCurrent;
   daily: WeatherDaily[];
   fetchedAt: string;
+  locationLabel?: string;
 }
 
 // ── Garbage ──
@@ -200,6 +201,8 @@ export interface GarbageScheduleEntry {
   labelJa: string;
   icon: string;
   dayOfWeek: number[];
+  /** 시구정촌이 공지한 예외를 포함한 실제 수거일. 있으면 요일보다 우선한다. */
+  collectionDates?: string[];
   frequency?: "weekly" | "biweekly" | "monthly";
   note?: string;
 }
@@ -207,6 +210,8 @@ export interface GarbageScheduleEntry {
 export interface GarbageScheduleData {
   entries: GarbageScheduleEntry[];
   region?: string;
+  sourceUrl?: string;
+  validThrough?: string;
 }
 
 // ── Packages ──

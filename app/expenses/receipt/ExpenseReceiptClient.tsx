@@ -156,8 +156,8 @@ export default function ExpenseReceiptClient() {
           <p className="mt-4 font-semibold text-white">날짜와 합계가 선명한 영수증 사진</p>
           <p className="mt-1 text-sm text-gray-500">JPG, PNG, WebP · 최대 10MB</p>
           <label className="mt-5 inline-flex min-h-12 cursor-pointer items-center rounded-xl bg-pink-400 px-5 py-3 font-semibold text-gray-950 hover:bg-pink-300">
-            {file ? "다른 사진 선택" : "사진 촬영 또는 선택"}
-            <input ref={inputRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(""); }} />
+            {file ? "다른 사진 선택" : "사진 선택 (카메라·앨범)"}
+            <input ref={inputRef} type="file" accept="image/*" className="sr-only" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(""); }} />
           </label>
           {file && <p className="mt-3 truncate text-sm text-pink-200">{file.name}</p>}
         </div>

@@ -12,9 +12,9 @@ const STATUS_LABELS: Record<PackageStatus, { label: string; color: string }> = {
   returned: { label: "반송", color: "text-red-400 bg-red-500/20" },
 };
 
-export default function PackagesClient() {
+export default function PackagesClient({ initialShowForm = false }: { initialShowForm?: boolean }) {
   const { data: packages = [] } = usePackages();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(initialShowForm);
   const [showDelivered, setShowDelivered] = useState(false);
   const [form, setForm] = useState({
     trackingNumber: "",

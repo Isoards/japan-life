@@ -1,5 +1,15 @@
 ﻿import { z } from "zod";
 
+export const userSettingsSchema = z.object({
+  residenceLabel: z.string().trim().min(1).max(120),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  moveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  lifeMode: z.enum(["auto", "preparation", "living"]),
+  payday: z.number().int().min(1).max(31),
+  timezone: z.literal("Asia/Tokyo"),
+});
+
 export const noteSchema = z.object({
   japanese: z.string().min(1),
   korean: z.string().min(1),
@@ -123,6 +133,7 @@ export const garbageEntrySchema = z.object({
   labelJa: z.string().min(1),
   icon: z.string(),
   dayOfWeek: z.array(z.number().min(0).max(6)),
+  collectionDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
   frequency: z.enum(["weekly", "biweekly", "monthly"]).optional(),
   note: z.string().optional(),
 });
@@ -130,6 +141,8 @@ export const garbageEntrySchema = z.object({
 export const garbageScheduleSchema = z.object({
   entries: z.array(garbageEntrySchema),
   region: z.string().optional(),
+  sourceUrl: z.string().url().optional(),
+  validThrough: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 // ── Packages ──
