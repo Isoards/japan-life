@@ -26,6 +26,8 @@ export default function DishCard({ result, cookedItems = [] }: { result: DishRec
         <span className="text-xs font-mono text-gray-400">{result.matchPercent}%</span>
       </div>
         {missingCount > 0 && <p className="mt-2 truncate text-xs text-gray-500">부족: {[...result.missingRequired, ...result.missingImportant].map((item) => item.nameKo).join(", ")}</p>}
+        {result.expiringIngredients.length > 0 && <p className="mt-2 truncate text-xs font-medium text-amber-200">⏳ {result.expiringIngredients.map((item) => `${item.ingredient.nameKo} ${item.daysRemaining === 0 ? "오늘" : `D-${item.daysRemaining}`}`).join(", ")} 먼저 사용</p>}
+        {result.matchedBySubstitution.length > 0 && <p className="mt-2 truncate text-xs text-violet-300">대체재 {result.matchedBySubstitution.length}개 반영</p>}
         {latest && <p className="mt-2 text-xs text-sky-300">최근 {new Date(latest.cookedAt).toLocaleDateString("ko-KR")} · 총 {cookedItems.length}회</p>}
       </Link>
       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">

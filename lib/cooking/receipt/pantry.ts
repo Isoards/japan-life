@@ -1,9 +1,9 @@
-import type { PantryData, ReceiptConfirmResult, StorageLocation } from "../types";
+import type { PantryData, ReceiptConfirmResult } from "../types";
+import { defaultStorageLocation } from "../freshness";
 
 export function mergeReceiptIngredients(
   pantry: PantryData,
   ingredientIds: string[],
-  storageLocation: StorageLocation = "PANTRY",
   addedAt = new Date().toISOString(),
 ): ReceiptConfirmResult {
   const owned = new Set(pantry.items.map((item) => item.ingredientId));
@@ -13,7 +13,7 @@ export function mergeReceiptIngredients(
   return {
     pantry: {
       ...pantry,
-      items: [...pantry.items, ...addedIngredientIds.map((ingredientId) => ({ ingredientId, storageLocation, addedAt }))],
+      items: [...pantry.items, ...addedIngredientIds.map((ingredientId) => ({ ingredientId, storageLocation: defaultStorageLocation(ingredientId), addedAt }))],
     },
     addedIngredientIds,
     alreadyOwnedIngredientIds,

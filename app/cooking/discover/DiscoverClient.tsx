@@ -8,7 +8,7 @@ import { COLLECTION_SECTION_LABELS, CUISINE_LABELS } from "@/lib/cooking/names";
 import type { Cuisine, RecipeCollectionSection } from "@/lib/cooking/types";
 import { useCookingOverview } from "@/lib/hooks/use-api";
 
-type Availability = "ALL" | "NOW" | "ONE" | "COOKED";
+type Availability = "ALL" | "NOW" | "ONE" | "SUBSTITUTE" | "COOKED";
 const cuisines: (Cuisine | "ALL")[] = ["ALL", "KOREAN", "JAPANESE", "CHINESE", "WESTERN", "OTHER"];
 const collectionSections = Object.keys(COLLECTION_SECTION_LABELS) as RecipeCollectionSection[];
 
@@ -33,6 +33,7 @@ export default function DiscoverClient() {
         && (availability === "ALL"
           || (availability === "NOW" && result.canCookNow)
           || (availability === "ONE" && result.missingCoreCount === 1)
+          || (availability === "SUBSTITUTE" && result.matchedBySubstitution.length > 0)
           || (availability === "COOKED" && cookedByDish.has(result.dish.id))),
       )
       .sort((a, b) =>
@@ -46,7 +47,7 @@ export default function DiscoverClient() {
     <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
       <FilterRow><Chip active={collection === "ALL"} onClick={() => { setCollection("ALL"); setCollectionSection("ALL"); }}>전체 레시피</Chip><Chip active={collection === "RYU_SO_YOUNG"} onClick={() => setCollection("RYU_SO_YOUNG")}>류수영</Chip></FilterRow>
       {collection === "RYU_SO_YOUNG" && <FilterRow><Chip active={collectionSection === "ALL"} onClick={() => setCollectionSection("ALL")}>전체 79개</Chip>{collectionSections.map((value) => <Chip key={value} active={collectionSection === value} onClick={() => setCollectionSection(value)}>{COLLECTION_SECTION_LABELS[value]}</Chip>)}</FilterRow>}
-      <FilterRow>{cuisines.map((value) => <Chip key={value} active={cuisine === value} onClick={() => setCuisine(value)}>{value === "ALL" ? "모든 나라" : CUISINE_LABELS[value]}</Chip>)}</FilterRow><FilterRow>{([['ALL','전체 상태'],['NOW','바로 가능'],['ONE','핵심 재료 1개 부족'],['COOKED','해본 요리']] as [Availability,string][]).map(([value,label]) => <Chip key={value} active={availability === value} onClick={() => setAvailability(value)}>{label}</Chip>)}</FilterRow></div>
+      <FilterRow>{cuisines.map((value) => <Chip key={value} active={cuisine === value} onClick={() => setCuisine(value)}>{value === "ALL" ? "모든 나라" : CUISINE_LABELS[value]}</Chip>)}</FilterRow><FilterRow>{([['ALL','전체 상태'],['NOW','바로 가능'],['ONE','핵심 재료 1개 부족'],['SUBSTITUTE','대체재 활용'],['COOKED','해본 요리']] as [Availability,string][]).map(([value,label]) => <Chip key={value} active={availability === value} onClick={() => setAvailability(value)}>{label}</Chip>)}</FilterRow></div>
     <div className="flex items-center justify-between gap-3 text-sm text-gray-500"><p>조건에 맞는 요리 {results.length}개</p><p className="text-xs text-gray-600">핵심 재료 부족이 적은 순</p></div>{isLoading ? <p className="py-16 text-center text-sm text-gray-500">추천을 계산하는 중...</p> : results.length ? <div className="grid gap-3 md:grid-cols-2">{results.map((result) => <DishCard key={result.dish.id} result={result} cookedItems={cookedByDish.get(result.dish.id)} />)}</div> : <p className="rounded-xl border border-dashed border-white/10 py-16 text-center text-gray-500">조건에 맞는 요리가 없어요.</p>}</div>;
 }
 function FilterRow({ children }: { children: React.ReactNode }) { return <div className="flex flex-wrap gap-2">{children}</div>; }

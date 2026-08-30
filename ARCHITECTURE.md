@@ -14,7 +14,7 @@ Japan Life Dashboard는 일본 생활/정착을 관리하는 개인용 Next.js �
 - **Expenses**: 5개 대분류 예산 플래너, Google Sheets 월별 집계, 전월 급여 기반 예상 수입, 지출 차트, 정기 지출 탐지, 다중 카테고리 영수증 등록.
 - **Notes**: 일본어/업무/EV/SW 메모, 템플릿, SRS 퀴즈, 링크 관리.
 - **Life Tools**: 노래방 검색, 쓰레기 수거 일정, 택배 관리, PWA offline fallback.
-- **Cooking**: Pantry, 결정론적 요리 추천, 일본어 장보기 이름, 단일 재료 Unlock 분석, 영수증 기반 Pantry 등록.
+- **Cooking**: 자동 보관 Pantry, 신선식품 권장 사용일, 결정론적 요리·대체재 추천, 주간 식단, 식단/Unlock 장보기, 영수증 기반 Pantry 등록.
 
 ## 2. Technology
 
@@ -75,7 +75,8 @@ docs/                   Review notes and planning docs
 - `notes: v2`
 - `user-concerts: v2`
 - `cooking-cooked: v2`
-- `checklist, favorites, links, garbage, packages, cooking-pantry: v1`
+- `cooking-pantry: v2`
+- `checklist, favorites, links, garbage, packages, cooking-meal-plan: v1`
 
 Writes are backed up and saved atomically with a tmp-file + rename/copy fallback.
 
@@ -102,8 +103,9 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `/cooking`: 요리 추천 요약
 - `/cooking/pantry`: 보유 식재료 관리
 - `/cooking/discover`: 국가·재료 상태별 요리 탐색
+- `/cooking/planner`: 점심·저녁 주간 식단 편성
 - `/cooking/dishes/[id]`: 재료 상태·대체재·외부 레시피 상세
-- `/cooking/shopping`: 단일 재료 구매 시 새롭게 가능한 요리 순위
+- `/cooking/shopping`: 이번 주 식단의 부족 재료와 단일 재료 Unlock 순위
 - `/cooking/receipt`: 일본 영수증 촬영, OCR 결과 검토 및 Pantry 일괄 추가
 
 ### 5.2 JSON Store APIs
@@ -117,8 +119,9 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `POST /api/user-concerts/import`
 - `GET, POST /api/garbage`
 - `GET, POST, PATCH, DELETE /api/packages`
-- `GET, POST, DELETE /api/cooking/pantry`
+- `GET, POST, PATCH, DELETE /api/cooking/pantry`
 - `GET, POST, DELETE /api/cooking/cooked`
+- `GET, POST, PATCH, DELETE /api/cooking/meal-plan`
 
 ### 5.3 External/Computed APIs
 
@@ -222,12 +225,13 @@ The UI prioritizes actual payslip line items and uses estimated bonus net pay on
 - `data/user/packages.json` when created
 - `data/user/cooking-pantry.json` when the pantry is changed
 - `data/user/cooking-cooked.json`: 날짜, 참고 URL, 메모를 포함한 반복 조리 이력
+- `data/user/cooking-meal-plan.json`: 날짜·점심/저녁 슬롯별 주간 식단
 
 `data/user` is runtime storage and should not be used as static seed data.
 
 ### 7.3 Cooking recommendation model
 
-`lib/cooking`은 정적 데이터/파일 저장과 추천 규칙을 분리한다. `recommendation.ts`는 REQUIRED를 가장 크게 가중하고 IMPORTANT, OPTIONAL 순으로 적합도를 계산한다. UI의 `바로 가능`은 REQUIRED와 IMPORTANT가 모두 충족된 경우만 의미하며 OPTIONAL은 판정을 막지 않는다. GOOD 대체재는 해당 재료를 충족한 것으로 처리하며 그 외 대체재는 부분 점수로 반영한다. `unlock.ts`는 Pantry에 없는 재료를 하나씩 가상 추가해 새롭게 `canCookNow`가 되는 요리를 계산한다. 두 모듈은 평범한 배열을 입력받는 순수 함수이므로 저장소를 바꾸어도 다시 사용할 수 있다.
+`lib/cooking`은 정적 데이터/파일 저장과 추천 규칙을 분리한다. `freshness.ts`는 재료별 자동 보관 위치와 등록일 기준 권장 사용일을 계산하며, 기한이 지난 신선식품은 보유 판정에서 제외한다. `recommendation.ts`는 REQUIRED를 가장 크게 가중하고 IMPORTANT, OPTIONAL 순으로 적합도를 계산하며, 사용이 임박한 재료를 활용하는 요리를 우선한다. UI의 `바로 가능`은 REQUIRED와 IMPORTANT가 모두 충족된 경우만 의미하며 OPTIONAL은 판정을 막지 않는다. GOOD 대체재는 해당 재료를 충족한 것으로 처리하고 여러 후보 중 품질이 가장 좋은 관계를 선택하며, 그 외 대체재는 부분 점수로 반영한다. `unlock.ts`는 Pantry에 없는 재료를 하나씩 가상 추가해 새롭게 `canCookNow`가 되는 요리를 계산한다. 이 모듈들은 평범한 배열을 입력받는 순수 함수이므로 저장소를 바꾸어도 다시 사용할 수 있다.
 
 ### 7.4 Receipt OCR and pantry import
 

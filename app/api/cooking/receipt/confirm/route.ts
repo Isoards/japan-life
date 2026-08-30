@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (invalid) return NextResponse.json({ error: "등록되지 않은 식재료가 포함되어 있습니다." }, { status: 400 });
 
     const pantry = await readStore<PantryData>(STORE_NAME, { items: [] });
-    const result = mergeReceiptIngredients(pantry, parsed.data.ingredientIds, parsed.data.storageLocation);
+    const result = mergeReceiptIngredients(pantry, parsed.data.ingredientIds);
     await writeStore(STORE_NAME, result.pantry);
     return NextResponse.json(result);
   } catch {

@@ -99,13 +99,22 @@ export interface RecipeSource {
 
 export interface PantryItem {
   ingredientId: string;
-  storageLocation: StorageLocation;
+  storageLocation?: StorageLocation;
   addedAt: string;
 }
 
 export interface PantryData {
   __version?: number;
   items: PantryItem[];
+}
+
+export type FreshnessStatus = "NONE" | "FRESH" | "SOON" | "TODAY" | "EXPIRED" | "FROZEN";
+
+export interface PantryFreshness {
+  ingredientId: string;
+  status: FreshnessStatus;
+  daysRemaining?: number;
+  recommendedUseBy?: string;
 }
 
 export interface CookedDishItem {
@@ -138,6 +147,7 @@ export interface DishRecommendation {
   missingImportant: Ingredient[];
   missingOptional: Ingredient[];
   matchedBySubstitution: SubstitutionMatch[];
+  expiringIngredients: Array<{ ingredient: Ingredient; daysRemaining: number }>;
   requirements: DishIngredient[];
 }
 
@@ -151,7 +161,23 @@ export interface UnlockRecommendation {
 export interface CookingOverview {
   ingredients: Ingredient[];
   pantry: PantryData;
+  freshness: PantryFreshness[];
   cookedDishes: CookedDishesData;
   recommendations: DishRecommendation[];
   unlocks: UnlockRecommendation[];
+}
+
+export type MealSlot = "LUNCH" | "DINNER";
+
+export interface MealPlanItem {
+  id: string;
+  date: string;
+  slot: MealSlot;
+  dishId: string;
+  note?: string;
+}
+
+export interface MealPlanData {
+  __version?: number;
+  items: MealPlanItem[];
 }

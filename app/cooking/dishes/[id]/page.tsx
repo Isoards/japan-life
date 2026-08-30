@@ -17,7 +17,7 @@ export default async function DishDetailPage({ params }: { params: Promise<{ id:
   const overview = await getCookingOverview();
   const result = overview.recommendations.find((item) => item.dish.id === id);
   if (!result) notFound();
-  const owned = new Set(overview.pantry.items.map((item) => item.ingredientId));
+  const owned = new Set(overview.freshness.filter((item) => item.status !== "EXPIRED").map((item) => item.ingredientId));
   const requirements = getDishRequirements(id);
   const sources = getDishSources(id);
   const cookedItems = overview.cookedDishes.items.filter((item) => item.dishId === id).sort((a, b) => b.cookedAt.localeCompare(a.cookedAt));

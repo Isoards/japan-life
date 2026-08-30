@@ -16,7 +16,7 @@ import type {
 } from "../types";
 import type { UserConcert } from "../userConcerts";
 import type { FavoriteArtist } from "../favorites";
-import type { CookingOverview } from "../cooking/types";
+import type { CookingOverview, MealPlanData } from "../cooking/types";
 
 interface SearchResult {
   itunesId: number;
@@ -151,6 +151,13 @@ export function usePackages() {
 
 export function useCookingOverview() {
   return useSWR<CookingOverview>("/api/cooking/overview", fetcher, {
+    revalidateOnFocus: false,
+  });
+}
+
+export function useMealPlan() {
+  return useSWR<MealPlanData>("/api/cooking/meal-plan", fetcher, {
+    fallbackData: { items: [] },
     revalidateOnFocus: false,
   });
 }

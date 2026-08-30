@@ -156,7 +156,11 @@ export const packagePatchSchema = z.object({
 
 export const pantryItemSchema = z.object({
   ingredientId: z.string().min(1),
-  storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
+});
+
+export const pantryFreezeSchema = z.object({
+  ingredientId: z.string().min(1),
+  frozen: z.boolean(),
 });
 
 export const receiptParseSchema = z.object({
@@ -165,7 +169,25 @@ export const receiptParseSchema = z.object({
 
 export const receiptConfirmSchema = z.object({
   ingredientIds: z.array(z.string().min(1)).max(200),
-  storageLocation: z.enum(["PANTRY", "FRIDGE", "FREEZER"]).optional().default("PANTRY"),
+});
+
+const dateKeySchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "날짜 형식은 YYYY-MM-DD여야 합니다")
+  .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), "올바른 날짜를 입력해 주세요");
+
+export const mealPlanCreateSchema = z.object({
+  date: dateKeySchema,
+  slot: z.enum(["LUNCH", "DINNER"]),
+  dishId: z.string().min(1),
+  note: z.string().trim().max(200).optional().default(""),
+});
+
+export const mealPlanPatchSchema = z.object({
+  id: z.string().min(1),
+  date: dateKeySchema.optional(),
+  slot: z.enum(["LUNCH", "DINNER"]).optional(),
+  dishId: z.string().min(1).optional(),
+  note: z.string().trim().max(200).optional(),
 });
 
 export const expenseReceiptParseSchema = z.object({

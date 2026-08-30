@@ -21,8 +21,9 @@ const STORE_VERSIONS: Record<string, number> = {
   "user-concerts": 2,
   garbage: 1,
   packages: 1,
-  "cooking-pantry": 1,
+  "cooking-pantry": 2,
   "cooking-cooked": 2,
+  "cooking-meal-plan": 1,
 };
 
 /**
@@ -30,6 +31,21 @@ const STORE_VERSIONS: Record<string, number> = {
  * 예: budget v1 → v2: sheetCategories 필드 보장
  */
 const MIGRATIONS: Record<string, Record<number, Migration>> = {
+  "cooking-pantry": {
+    1: (data: unknown) => {
+      if (!isPlainObject(data) || !Array.isArray(data.items)) return data;
+      return {
+        ...data,
+        items: data.items.map((item) => {
+          const record = item as Record<string, unknown>;
+          // 기존 냉동 선택만 보존하고, 나머지는 재료별 자동 기본값으로 전환한다.
+          return record.storageLocation === "FREEZER"
+            ? record
+            : { ...record, storageLocation: undefined };
+        }),
+      };
+    },
+  },
   "cooking-cooked": {
     1: (data: unknown) => {
       if (!isPlainObject(data) || !Array.isArray(data.items)) return data;

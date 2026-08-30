@@ -3,16 +3,22 @@
 import Link from "next/link";
 import CookingHeader from "@/components/cooking/CookingHeader";
 import DishCard from "@/components/cooking/DishCard";
+import { dateKeyInTokyo } from "@/lib/cooking/freshness";
+import { getWeekDates, getWeekStart } from "@/lib/cooking/meal-plan";
 import { displayDishName } from "@/lib/cooking/names";
-import { useCookingOverview } from "@/lib/hooks/use-api";
+import { useCookingOverview, useMealPlan } from "@/lib/hooks/use-api";
 
 export default function CookingHomeClient() {
   const { data, isLoading } = useCookingOverview();
+  const { data: mealPlan } = useMealPlan();
   if (isLoading || !data) return <CookingLoading />;
 
   const cookNow = data.recommendations.filter((result) => result.canCookNow).slice(0, 4);
   const oneAway = data.recommendations.filter((result) => result.missingCoreCount === 1).slice(0, 4);
   const topUnlock = data.unlocks[0];
+  const weekDates = new Set(getWeekDates(getWeekStart(dateKeyInTokyo())));
+  const plannedThisWeek = (mealPlan?.items ?? []).filter((item) => weekDates.has(item.date));
+  const urgentCount = data.freshness.filter((item) => ["SOON", "TODAY", "EXPIRED"].includes(item.status)).length;
   const cookedByDish = new Map<string, typeof data.cookedDishes.items>();
   for (const item of data.cookedDishes.items) cookedByDish.set(item.dishId, [...(cookedByDish.get(item.dishId) ?? []), item]);
 
@@ -20,11 +26,13 @@ export default function CookingHomeClient() {
     <div className="space-y-8">
       <CookingHeader title="오늘, 집에 있는 재료로" description="보유 식재료를 기준으로 한식·일식·중식·양식을 추천하고, 다음에 살 재료까지 골라드려요." />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <SummaryCard icon="🥬" label="보유 식재료" value={`${data.pantry.items.length}개`} href="/cooking/pantry" />
+        <SummaryCard icon="⏳" label="먼저 사용할 재료" value={`${urgentCount}개`} href="/cooking/pantry" />
         <SummaryCard icon="🍚" label="바로 가능한 요리" value={`${data.recommendations.filter((item) => item.canCookNow).length}개`} href="/cooking/discover?filter=now" />
         <SummaryCard icon="🛒" label="한 개만 더 사면" value={`${data.recommendations.filter((item) => item.missingCoreCount === 1).length}개`} href="/cooking/discover?filter=one" />
         <SummaryCard icon="👨‍🍳" label="해본 요리" value={`${cookedByDish.size}개`} href="/cooking/discover?filter=cooked" />
+        <SummaryCard icon="🗓️" label="이번 주 식단" value={`${plannedThisWeek.length}끼`} href="/cooking/planner" />
       </div>
 
       <Link href="/cooking/receipt" className="flex min-h-14 items-center justify-between rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100 transition hover:bg-emerald-500/15">
