@@ -5,6 +5,8 @@ export const INGREDIENT_CATEGORIES = [
 
 export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number];
 export type Cuisine = "KOREAN" | "JAPANESE" | "CHINESE" | "WESTERN" | "OTHER";
+export type RecipeCollection = "RYU_SO_YOUNG";
+export type RecipeCollectionSection = "SPECIAL" | "RICE" | "NOODLE" | "SOUP" | "SNACK";
 export type Importance = "REQUIRED" | "IMPORTANT" | "OPTIONAL";
 export type StorageLocation = "PANTRY" | "FRIDGE" | "FREEZER";
 
@@ -76,6 +78,8 @@ export interface Dish {
   mealPrepFriendly?: boolean;
   soloFriendly?: boolean;
   tags?: string[];
+  collection?: RecipeCollection;
+  collectionSection?: RecipeCollectionSection;
 }
 
 export interface DishIngredient {

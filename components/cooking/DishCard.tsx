@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CUISINE_LABELS, displayDishName } from "@/lib/cooking/names";
+import { COLLECTION_SECTION_LABELS, CUISINE_LABELS, displayDishName } from "@/lib/cooking/names";
 import type { CookedDishItem, DishRecommendation } from "@/lib/cooking/types";
 import CookedButton from "./CookedButton";
 
@@ -13,7 +13,7 @@ export default function DishCard({ result, cookedItems = [] }: { result: DishRec
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-semibold text-white group-hover:text-orange-200">{displayDishName(result.dish)}</p>
-          <p className="mt-1 text-xs text-gray-500">{CUISINE_LABELS[result.dish.cuisine]}</p>
+          <p className="mt-1 text-xs text-gray-500">{result.dish.collection === "RYU_SO_YOUNG" ? `류수영 · ${COLLECTION_SECTION_LABELS[result.dish.collectionSection!]}` : CUISINE_LABELS[result.dish.cuisine]}</p>
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${result.canCookNow ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
           {result.canCookNow ? "바로 가능" : `${result.missingCoreCount}개 핵심 재료 부족`}

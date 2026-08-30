@@ -6,15 +6,15 @@ Japan Life Dashboard는 일본 생활/정착을 관리하는 개인용 Next.js �
 
 ### Current Domains
 
-- **Dashboard**: 체크리스트, 예산 잔액, 콘서트, 환율, 날씨, 공휴일, 쓰레기, 택배, 최신 발매 요약.
+- **Dashboard**: 체크리스트, 예산 잔액, 콘서트, 환율, 날씨, 공휴일, 쓰레기, 택배, 최신 발매 요약과 요리/영수증 빠른 진입점.
 - **Music**: 아티스트 검색, 즐겨찾기, iTunes 기반 상세/최신곡, Apple Music JP Top100.
 - **Concerts**: 일정 CRUD, 티켓 마일스톤, 공지 URL/텍스트 import.
 - **Checklist**: 출국/정착/생활/업무/재정 체크리스트.
 - **Calculator**: 실제 급여명세 기반 월급 분석, 보너스 포함 연 실수령 예상, 환율/구독비 계산.
-- **Expenses**: 예산 플래너, Google Sheets 월별 집계, 전월 급여 기반 예상 수입, 지출 차트, 정기 지출 탐지.
+- **Expenses**: 5개 대분류 예산 플래너, Google Sheets 월별 집계, 전월 급여 기반 예상 수입, 지출 차트, 정기 지출 탐지, 다중 카테고리 영수증 등록.
 - **Notes**: 일본어/업무/EV/SW 메모, 템플릿, SRS 퀴즈, 링크 관리.
 - **Life Tools**: 노래방 검색, 쓰레기 수거 일정, 택배 관리, PWA offline fallback.
-- **Cooking**: Pantry, 결정론적 요리 추천, 일본어 장보기 이름, 단일 재료 Unlock 분석.
+- **Cooking**: Pantry, 결정론적 요리 추천, 일본어 장보기 이름, 단일 재료 Unlock 분석, 영수증 기반 Pantry 등록.
 
 ## 2. Technology
 
@@ -39,7 +39,10 @@ data/                   Static seed data bundled with the app
 data/user/              Runtime JSON store, ignored for new files
 lib/
   constants/            Domain constants
+  cooking/              Pantry, 추천, 영수증 Ingredient 매칭
+  expenses/             가계부 영수증 초안과 Sheets 쓰기
   hooks/use-api.ts      SWR hooks and mutation helper
+  receipt/              공용 OCR 공급자와 일반 영수증 파서
   store.ts              Versioned JSON persistence
   sheets.ts             Google Sheets parsing/aggregation helpers
   calculator.ts         Salary, payslip, budget helpers
@@ -68,10 +71,11 @@ docs/                   Review notes and planning docs
 
 `lib/store.ts` stores user state as JSON files and applies versioned migrations.
 
-- `budget: v5`
+- `budget: v9`
 - `notes: v2`
 - `user-concerts: v2`
-- `checklist, favorites, links, garbage, packages: v1`
+- `cooking-cooked: v2`
+- `checklist, favorites, links, garbage, packages, cooking-pantry: v1`
 
 Writes are backed up and saved atomically with a tmp-file + rename/copy fallback.
 
@@ -133,7 +137,7 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `POST /api/cooking/receipt/parse`: 일반 문자열 행을 결정적 품목 파서로 분석
 - `POST /api/cooking/receipt/confirm`: 검토된 Ingredient ID를 Pantry에 중복 없이 병합
 - `POST /api/expenses/receipt/ocr`: 공용 OCR 공급자로 가계부 영수증 처리
-- `POST /api/expenses/receipt/parse`: 상점·날짜·품목별 가격·합계를 분류가이드 기반 다중 카테고리 초안으로 변환
+- `POST /api/expenses/receipt/parse`: 상점·날짜·품목별 가격·합계를 가이드 정렬 정적 규칙으로 다중 카테고리 초안으로 변환
 - `POST /api/expenses/receipt/confirm`: 카테고리 합계와 중복을 확인한 뒤 내역 행들을 추가
 
 ## 6. Domain Notes
@@ -168,11 +172,11 @@ Recurring expense detection:
 - Rejects groups with amount variation over 35%.
 - Marks confidence as high when 3+ months repeat and variation is 15% or lower.
 
-Receipt expense import keeps general receipt parsing separate from Cooking ingredient matching. `lib/receipt/ocr` owns the shared OCR provider, `lib/receipt/parser` extracts merchant/date/items/item prices/total, and `lib/expenses/receipt` formats an editable expense draft. Parse and confirm read `설정!A2:D47`, while parse also reads `분류가이드!A11:D21`; only categories whose type is `지출` and payment methods present in column D are accepted. Deterministic product rules group one receipt into categories such as `장보기`, `술/유흥`, and `생활용품`. The review UI also supports adding a category omitted by OCR or deleting an incorrect group. Confirm rejects the draft unless every row has a positive amount and the group amounts exactly equal the receipt total, then appends one A:I row per category using the configured service account or Apps Script writer. I열 `정기` is `FALSE`. Existing summary code continues to aggregate B:F.
+Receipt expense import keeps general receipt parsing separate from Cooking ingredient matching. `lib/receipt/ocr` owns the shared OCR provider, `lib/receipt/parser` extracts merchant/date/items/item prices/total, and `lib/expenses/receipt` formats an editable expense draft. Parse and confirm read `설정!A2:D47`, while parse also reads and displays `분류가이드!A11:D21`; only categories whose type is `지출` and payment methods present in column D are accepted. Product grouping itself uses deterministic keyword rules maintained in code and aligned with the guide, rather than interpreting guide prose dynamically. The review UI supports correcting groups, adding a category omitted by OCR, or deleting an incorrect group. Confirm rejects the draft unless every row has a positive amount and the group amounts exactly equal the receipt total, then appends one A:I row per category using the configured service account or Apps Script writer. I열 `정기` is `FALSE`. Existing summary code continues to aggregate B:F.
 
 Expense descriptions use the established Korean-first Sheet style (`토리센 (김밥)`). `lib/expenses/receipt/koreanize.ts` applies a compact deterministic merchant/product dictionary first, then optionally sends only unresolved merchant/item strings to Google Cloud Translation Basic. The review UI retains the original Japanese OCR strings and all Korean fields remain editable before confirmation.
 
-Budget planning displays the `설정` sheet's current five major groups rather than one input per detailed expense category. `BudgetCategory.sheetCategories` keeps the exact detailed-category mapping used to aggregate actual spending. The default diagnostic plan is `식비 35,000`, `고정·계약비 45,000`, `교통·차량 50,000`, `생활·소비 10,000`, and `사교·여가 25,000` yen, for a total monthly spending ceiling of 165,000 yen against a 228,000 yen baseline take-home income.
+Budget planning displays five major groups rather than one input per detailed expense category. `BudgetCategory.sheetCategories` is a code-maintained snapshot of the current `설정` sheet mapping and aggregates all 39 detailed expense categories. The default diagnostic plan is `식비 35,000`, `고정·계약비 45,000`, `교통·차량 50,000`, `생활·소비 10,000`, and `사교·여가 25,000` yen, for a total monthly spending ceiling of 165,000 yen against a 228,000 yen baseline take-home income. A change to the Sheet's category or major-group structure requires updating `lib/constants/budget.ts`.
 
 ### 6.2 Calculator
 
@@ -238,7 +242,7 @@ mobile image → /receipt/ocr → ReceiptOcrProvider (Google Cloud Vision)
 ```
 
 - `lib/receipt/ocr`: Cooking과 Expenses가 공유하는 교체 가능한 `ReceiptOcrProvider`와 Google Cloud Vision REST 구현. 서버 환경 변수만 사용한다.
-- `lib/receipt/parser`: 상점·거래일·구매 품목·최종 금액을 보존하는 일반 영수증 파서.
+- `lib/receipt/parser`: 상점·거래일·구매 품목·품목 행 끝 가격·최종 금액을 보존하는 일반 영수증 파서.
 - `lib/cooking/receipt`: OCR과 무관한 순수 문자열 정리, 메타데이터 필터, 식품 분류, Ingredient 점수 매칭, Pantry 병합.
 - `Ingredient.receiptAliasesJa`: 정식 일본어 이름과 별개인 영수증 축약·PB 표기를 보관한다. 새 표기는 Ingredient를 복제하지 않고 이 배열에 추가한다.
 - 0.90 이상은 높은 신뢰도로 자동 선택하고, 0.70–0.89는 선택하되 검토 대상으로 표시하며, 그 미만은 사용자가 후보 또는 전체 Ingredient 검색으로 정한다.
@@ -247,7 +251,7 @@ mobile image → /receipt/ocr → ReceiptOcrProvider (Google Cloud Vision)
 
 ## 8. External Configuration
 
-- `GOOGLE_SHEETS_API_KEY`: required for `/api/sheets`, `/api/sheets/trend`, `/api/sheets/recurring`
+- `GOOGLE_SHEETS_API_KEY`: Sheets 집계, 영수증 설정/분류가이드 읽기, 중복 확인에 사용
 - `GOOGLE_SHEETS_ID`: optional spreadsheet override
 - `GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL`: server-only service account used for expense row append
 - `GOOGLE_SHEETS_PRIVATE_KEY`: server-only private key used for expense row append

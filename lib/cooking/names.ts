@@ -1,7 +1,15 @@
-import type { Cuisine, Dish, IngredientCategory, Importance, StorageLocation } from "./types";
+import type { Cuisine, Dish, IngredientCategory, Importance, RecipeCollectionSection, StorageLocation } from "./types";
 
 export const CUISINE_LABELS: Record<Cuisine, string> = {
   KOREAN: "한식", JAPANESE: "일식", CHINESE: "중식", WESTERN: "양식", OTHER: "기타",
+};
+
+export const COLLECTION_SECTION_LABELS: Record<RecipeCollectionSection, string> = {
+  SPECIAL: "평생 특식",
+  RICE: "평생 밥",
+  NOODLE: "평생 면",
+  SOUP: "평생 국·탕·찌개",
+  SNACK: "평생 간식",
 };
 
 export const CATEGORY_LABELS: Record<IngredientCategory, string> = {
