@@ -124,6 +124,28 @@ npm run start
 
 `data/user`는 런타임 저장소이며 API CRUD 결과가 이 파일들에 반영됩니다.
 
+## ChatGPT Pantry 플러그인
+
+`https://japan.isoard.synology.me/api/mcp`는 ChatGPT가 최신 Pantry, 신선도 기반 요리 추천, 구매 효과가 높은 재료를 읽는 Streamable HTTP MCP 엔드포인트입니다. 모든 도구는 읽기 전용이며 OpenAI API 키나 별도 모델 호출을 사용하지 않습니다.
+
+NAS의 Docker Compose 환경 변수에 다음 값을 설정하세요.
+
+```bash
+PANTRY_MCP_BASE_URL=https://japan.isoard.synology.me
+PANTRY_MCP_AUTH_SECRET=<openssl rand -base64 48로 생성한 32자 이상의 임의 값>
+PANTRY_MCP_PASSWORD=<ChatGPT 연결 화면에서 입력할 별도 비밀번호>
+PANTRY_MCP_ALLOWED_REDIRECT_ORIGINS=https://chatgpt.com
+```
+
+`PANTRY_MCP_AUTH_SECRET`과 `PANTRY_MCP_PASSWORD`는 서로 다른 값으로 설정하고 저장소에 커밋하지 마세요. 배포 후 다음 주소가 JSON을 반환하는지 확인합니다.
+
+```text
+https://japan.isoard.synology.me/.well-known/oauth-protected-resource
+https://japan.isoard.synology.me/.well-known/oauth-authorization-server
+```
+
+ChatGPT에서 `Settings → Security and login → Developer mode`를 켠 뒤 Plugins 화면에서 새 연결을 만들고 MCP URL로 `https://japan.isoard.synology.me/api/mcp`를 입력합니다. OAuth 화면이 열리면 `PANTRY_MCP_PASSWORD`를 입력하세요. 새 대화의 도구 메뉴에서 연결을 선택한 뒤 `내 Pantry 재료로 오늘 저녁 추천해줘`처럼 요청할 수 있습니다.
+
 ## 영수증 OCR 설정
 
 `/cooking/receipt`와 `/expenses/receipt`는 공용 Google Cloud Vision `DOCUMENT_TEXT_DETECTION` 공급자를 서버에서 호출합니다. Google Cloud 프로젝트에서 Vision API를 활성화하고 `GOOGLE_CLOUD_VISION_API_KEY`를 설정하세요. `RECEIPT_OCR_PROVIDER`의 현재 지원값은 `google-cloud-vision`이며 생략해도 이 값이 기본입니다. 키는 브라우저로 전달되지 않습니다.

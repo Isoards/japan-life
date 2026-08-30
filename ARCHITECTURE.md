@@ -143,6 +143,9 @@ Writes are backed up and saved atomically with a tmp-file + rename/copy fallback
 - `POST /api/cooking/receipt/ocr`: multipart 영수증 이미지를 서버 OCR로 처리
 - `POST /api/cooking/receipt/parse`: 일반 문자열 행을 결정적 품목 파서로 분석
 - `POST /api/cooking/receipt/confirm`: 검토된 Ingredient ID를 Pantry에 중복 없이 병합
+- `GET, POST, DELETE /api/mcp`: OAuth로 보호된 읽기 전용 Pantry MCP Streamable HTTP 엔드포인트
+- `GET /.well-known/oauth-protected-resource`: Pantry MCP 보호 리소스 메타데이터
+- `GET /.well-known/oauth-authorization-server`: ChatGPT 연결용 OAuth 2.1 메타데이터
 - `POST /api/expenses/receipt/ocr`: 공용 OCR 공급자로 가계부 영수증 처리
 - `POST /api/expenses/receipt/parse`: 상점·날짜·품목별 가격·합계를 가이드 정렬 정적 규칙으로 다중 카테고리 초안으로 변환
 - `POST /api/expenses/receipt/confirm`: 카테고리 합계와 중복을 확인한 뒤 내역 행들을 추가
